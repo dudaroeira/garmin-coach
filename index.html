@@ -8,18 +8,18 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
  :root{--bg:#0f172a;--card:#1e293b;--txt:#e2e8f0;--mut:#94a3b8;--acc:#38bdf8;}
- *{box-sizing:border-box;} body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,sans-serif;}
+ html,body{overflow-x:hidden;max-width:100%;} *{box-sizing:border-box;min-width:0;} body{margin:0;width:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,sans-serif;}
  header{padding:14px 16px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;}
  header b{font-size:16px;} .tabbar{display:flex;gap:6px;padding:8px 12px;position:sticky;top:0;background:var(--bg);border-bottom:1px solid #334155;}
  .tabbar button{flex:1;background:var(--card);color:var(--mut);border:0;border-radius:10px;padding:10px;font-size:13px;}
  .tabbar button.on{background:var(--acc);color:#04293f;font-weight:700;}
- main{padding:16px;max-width:760px;margin:0 auto;} .hide{display:none;}
- .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px;}
+ main{padding:14px 12px;max-width:760px;margin:0 auto;width:100%;} .hide{display:none;}
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-bottom:16px;}
  .kpi{background:var(--card);border-radius:12px;padding:12px;} .kpi .v{font-size:20px;font-weight:700;} .kpi .l{font-size:11px;color:var(--mut);}
  .card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:14px;}
  .coach{background:linear-gradient(135deg,#172554,#1e293b);border:1px solid #1d4ed8;border-radius:12px;padding:16px;white-space:pre-wrap;line-height:1.6;font-size:14px;}
  h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin:18px 0 8px;}
- table{width:100%;border-collapse:collapse;font-size:12px;} th,td{padding:7px 8px;border-bottom:1px solid #334155;text-align:center;white-space:nowrap;} .rowlab{text-align:left;color:var(--mut);}
+ table{width:100%;border-collapse:collapse;font-size:12px;} th,td{padding:6px 7px;border-bottom:1px solid #334155;text-align:center;white-space:nowrap;} .rowlab{text-align:left;color:var(--mut);}
  input,button,textarea{font-family:inherit;} .in{width:100%;background:#0b1220;color:var(--txt);border:1px solid #334155;border-radius:10px;padding:11px;font-size:14px;}
  .btn{background:var(--acc);color:#04293f;border:0;border-radius:10px;padding:11px 16px;font-weight:700;}
  #chat{display:flex;flex-direction:column;gap:10px;min-height:50vh;}
@@ -54,7 +54,7 @@
     <div id="coachBox"></div>
     <div id="kpis" class="kpis"></div>
     <h2>Comparacao mes a mes</h2>
-    <div class="card" style="overflow-x:auto"><div id="tabela"></div></div>
+    <div class="card" style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%"><div id="tabela"></div></div>
     <h2>Carga por mes</h2><div class="card"><canvas id="cCarga"></canvas></div>
     <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
     <p id="painelVazio" class="dim"></p>
