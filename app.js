@@ -131,11 +131,23 @@ async function entrar(session){
 function deslogado(){ $("app").classList.add("hide"); $("login").classList.remove("hide"); }
 
 /* ---------- eventos ---------- */
-$("enviarLink").onclick=async()=>{
-  const email=$("email").value.trim(); if(!email)return;
-  $("loginMsg").textContent="Enviando...";
-  const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split("#")[0]}});
-  $("loginMsg").textContent=error?("Erro: "+error.message):"Link enviado! Verifique seu e-mail e abra o link neste aparelho.";
+$("entrar").onclick=async()=>{
+  const email=$("email").value.trim(), senha=$("senha").value;
+  if(!email||!senha){$("loginMsg").textContent="Preencha e-mail e senha.";return;}
+  $("loginMsg").textContent="Entrando...";
+  const {error}=await sb.auth.signInWithPassword({email,password:senha});
+  if(error)$("loginMsg").textContent="Erro: "+error.message+" (se for a 1a vez, toque em Criar senha)";
+};
+$("criar").onclick=async()=>{
+  const email=$("email").value.trim(), senha=$("senha").value;
+  if(!email||senha.length<6){$("loginMsg").textContent="Use uma senha de 6+ caracteres.";return;}
+  $("loginMsg").textContent="Criando conta...";
+  const {data,error}=await sb.auth.signUp({email,password:senha});
+  if(error){$("loginMsg").textContent="Erro: "+error.message;return;}
+  if(data && data.session){ return; } // ja logou
+  // sem sessao -> tenta entrar (caso confirmacao de email esteja off)
+  const r=await sb.auth.signInWithPassword({email,password:senha});
+  $("loginMsg").textContent=r.error?("Conta criada. Agora toque em Entrar."):"";
 };
 $("sair").onclick=async()=>{await sb.auth.signOut();deslogado();};
 document.querySelector(".tabbar").onclick=e=>{const t=e.target.dataset.t;if(t)showTab(t);};
