@@ -23,9 +23,11 @@
  input,button,textarea{font-family:inherit;} .in{width:100%;background:#0b1220;color:var(--txt);border:1px solid #334155;border-radius:10px;padding:11px;font-size:14px;}
  .btn{background:var(--acc);color:#04293f;border:0;border-radius:10px;padding:11px 16px;font-weight:700;}
  #chat{display:flex;flex-direction:column;gap:10px;min-height:50vh;}
- .msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+ .msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;}
  .msg.u{align-self:flex-end;background:var(--acc);color:#04293f;} .msg.a{align-self:flex-start;background:var(--card);}
- .chatform{display:flex;gap:8px;position:sticky;bottom:0;background:var(--bg);padding:10px 0;}
+ .chatform{display:flex;gap:8px;align-items:flex-end;position:sticky;bottom:0;background:var(--bg);padding:10px 0;max-width:100%;}
+ .chatform textarea{flex:1;min-width:0;width:auto;resize:none;max-height:140px;}
+ .chatform .btn{flex:0 0 auto;}
  .dim{color:var(--mut);font-size:12px;line-height:1.5;} canvas{max-height:220px;}
  .center{max-width:380px;margin:12vh auto;text-align:center;padding:0 16px;}
 </style></head><body>
