@@ -85,6 +85,7 @@ async function gerarAvaliacao(){
 let GRANP="mes";
 function wkKeyG(d){const t=new Date(d+"T00:00:00");const o=(t.getDay()+6)%7;t.setDate(t.getDate()-o);return t.toISOString().slice(0,10);}
 function keyFnG(g){
+  if(g==="dia")return d=>d;
   if(g==="sem")return wkKeyG;
   if(g==="mes")return d=>d.slice(0,7);
   if(g==="tri")return d=>d.slice(0,4)+"-T"+(Math.floor((+d.slice(5,7)-1)/3)+1);
@@ -93,7 +94,8 @@ function keyFnG(g){
 }
 const MESN=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 function rotuloG(k,g){
-  if(g==="sem"){const p=k.split("-");return p[2]+"/"+p[1];}
+  if(g==="dia"){const p=k.split("-");return p[2]+"/"+p[1];}
+  if(g==="sem"){const p=k.split("-");return "sem "+p[2]+"/"+p[1];}
   if(g==="mes"){const p=k.split("-");return MESN[(+p[1])-1]+"/"+p[0].slice(2);}
   if(g==="tri"){const p=k.split("-T");return p[1]+"o tri/"+p[0].slice(2);}
   if(g==="ano")return k;
@@ -116,6 +118,8 @@ function renderPainel(){
   const linhas=[["Pedais",b=>b.cic_n],["Pedal h",b=>+b.cic_h.toFixed(1)],["Forca",b=>b.for_n],
     ["km",b=>Math.round(b.km)],["Carga",b=>Math.round(b.carga)],["VO2",b=>b.vo2],
     ["FC rep",b=>avgN(b.fcrep)],["Sono h",b=>avgN(b.sono)],["Stress",b=>avgN(b.stress)]];
+  const cap={dia:"dia",sem:"semana",mes:"mes",tri:"trimestre",ano:"ano",tudo:"todo o periodo"}[GRANP];
+  const capEl=document.getElementById("capPeriodo"); if(capEl) capEl.textContent="Cada coluna = 1 "+cap+" \u00b7 "+B.length+" no total";
   const lab=B.map(b=>rotuloG(b.k,GRANP));
   let th="<tr><th></th>"+lab.map(x=>`<th>${x}</th>`).join("")+"</tr>";
   let body=linhas.map(([t,g])=>`<tr><td class="rowlab">${t}</td>`+B.map(b=>`<td>${g(b)??"--"}</td>`).join("")+"</tr>").join("");
