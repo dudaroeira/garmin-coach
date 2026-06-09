@@ -8,7 +8,7 @@ const KEYLS = "coach_api_key";
 const SYSTEM = `Voce e um treinador pessoal experiente em ciclismo e treino de forca, com base cientifica (fisiologia, periodizacao, treino polarizado, forca para ciclistas, recuperacao, sono, gestao de carga). Acompanha UM atleta de forma proxima e continua.
 Jeito: portugues do Brasil, caloroso, direto e motivador; especifico e acionavel; honesto; usa os DADOS fornecidos; LEMBRA do historico e dos seus conselhos anteriores fazendo continuidade; prioriza recuperacao/sono/prevencao de lesao.
 Seguranca: nao e medico (diante de dor/sintomas, oriente buscar profissional); nunca recomende doping ou praticas de risco; se faltar dado, diga o que observar sem inventar.
-Na avaliacao semanal use secoes curtas: Como foi a semana / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
+Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
 
 let UID = null, ANALISE = null, SNAP_AT = null;
 
@@ -76,8 +76,8 @@ function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slic
 
 async function gerarAvaliacao(){
   const hist=await getHistorico();
-  const texto=await callClaude(contexto(hist),[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA seguindo as secoes, comparando com antes e dando continuidade aos seus conselhos anteriores (verificando o que foi seguido)."}],1600);
-  await sb.from("coach_history").insert({user_id:UID,resumo:ANALISE?.resumo||{},texto});
+  const texto=await callClaude(contexto(hist),[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA seguindo as secoes, incluindo a secao Evolucao do perfil com FC de repouso, VO2max, FTP e FC max atuais e como mudaram desde a ultima avaliacao. De continuidade aos seus conselhos anteriores (verificando o que foi seguido)."}],1600);
+  await sb.from("coach_history").insert({user_id:UID,resumo:Object.assign({},ANALISE?.resumo||{},{perfil:ANALISE?.perfil||{}}),texto});
   return texto;
 }
 
