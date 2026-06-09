@@ -234,7 +234,13 @@ document.getElementById("prevP").addEventListener("click",()=>{OFFP++;renderPain
 document.getElementById("nextP").addEventListener("click",()=>{OFFP--;renderPainel();});
 document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dataset.g;if(!g)return;GRANP=g;OFFP=0;[...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on",x.dataset.g===g));renderPainel();});
 
-sb.auth.onAuthStateChange((_e,session)=>{ if(session) entrar(session); else deslogado(); });
-(async()=>{ const {data:{session}}=await sb.auth.getSession(); if(session) entrar(session); else deslogado();
+(async()=>{
+  UID=UID_FIXO;
+  document.getElementById("login").classList.add("hide");
+  document.getElementById("app").classList.remove("hide");
+  const sair=document.getElementById("sair"); if(sair) sair.style.display="none";
+  const ak=document.getElementById("apikey"); if(ak) ak.value=localStorage.getItem(KEYLS)||"";
+  const uidEl=document.getElementById("uid"); if(uidEl) uidEl.textContent=UID;
+  await carregarTudo();
   if("serviceWorker" in navigator){ try{ await navigator.serviceWorker.register("sw.js"); }catch(e){} }
 })();
