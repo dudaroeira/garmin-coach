@@ -29,6 +29,9 @@
  .chatform textarea{flex:1;min-width:0;width:auto;resize:none;max-height:140px;}
  .chatform .btn{flex:0 0 auto;}
  .dim{color:var(--mut);font-size:12px;line-height:1.5;} canvas{max-height:220px;}
+ .seg{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 12px;}
+ .seg button{flex:1;min-width:62px;background:var(--card);color:var(--mut);border:0;border-radius:8px;padding:8px 6px;font-size:12px;}
+ .seg button.on{background:var(--acc);color:#04293f;font-weight:700;}
  .center{max-width:380px;margin:12vh auto;text-align:center;padding:0 16px;}
 </style></head><body>
 
@@ -55,9 +58,15 @@
   <main id="t-painel">
     <div id="coachBox"></div>
     <div id="kpis" class="kpis"></div>
-    <h2>Comparacao mes a mes</h2>
+    <div class="seg" id="seg">
+      <button data-g="sem">Semana</button>
+      <button data-g="mes" class="on">Mes</button>
+      <button data-g="tri">Trimestre</button>
+      <button data-g="ano">Ano</button>
+      <button data-g="tudo">Tudo</button>
+    </div>
     <div class="card" style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%"><div id="tabela"></div></div>
-    <h2>Carga por mes</h2><div class="card"><canvas id="cCarga"></canvas></div>
+    <h2>Carga</h2><div class="card"><canvas id="cCarga"></canvas></div>
     <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
     <p id="painelVazio" class="dim"></p>
   </main>

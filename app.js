@@ -12,16 +12,49 @@ Na avaliacao semanal use secoes curtas: Como foi a semana / O que evoluiu / Pont
 
 let UID = null, ANALISE = null, SNAP_AT = null;
 
+function _bucketsJS(gran){
+  const kf=keyFnG(gran), m=new Map();
+  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],stress:[],fcrep:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
+  for(const r of (ANALISE.daily||[])){const b=E(kf(r.d)); b.carga+=r.carga||0;
+    if(r.sono!=null)b.sono.push(r.sono); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);}
+  for(const x of (ANALISE.ativs||[])){const b=E(kf(x.d));
+    if(x.cat==="ciclismo"){b.cic_h+=x.h;b.cic_n++;b.km+=x.km||0;} else if(x.cat==="forca"){b.for_h+=x.h;b.for_n++;}}
+  for(const v of (ANALISE.vo2_xy||[])){const k=kf(v.d); if(m.has(k))m.get(k).vo2=v.v;}
+  return [...m.keys()].sort().map(k=>m.get(k));
+}
+const avgN=arr=>arr.length?Math.round(arr.reduce((x,y)=>x+y,0)/arr.length*10)/10:null;
+
 function digest(a){
   if(!a) return "Sem dados ainda.";
   const p=a.perfil||{},r=a.resumo||{},sd=a.saude||{},L=[];
-  L.push(`PERFIL: idade ${p.idade}, sexo ${p.sexo}, FC max ${p.fc_max}, FC repouso ${p.fc_repouso}, FTP ${p.ftp||"n/d"}`);
-  L.push(`PERIODO: ${a.dias} dias | ${r.n_atividades} atividades (${r.n_ciclismo} pedais, ${r.n_forca} forca) | ${r.horas_total}h | ACWR ${r.acwr_atual}`);
-  L.push(`SAUDE 30d: sono ${sd.media_sono_30d}h, stress ${sd.media_stress_30d}, passos ${sd.media_passos_30d}, cal ativas ${sd.media_cal_ativas_30d}`);
+  L.push(`PERFIL: idade ${p.idade}, sexo ${p.sexo}, FC max ${p.fc_max}, FC repouso ${p.fc_repouso}, FTP ${p.ftp||"sem medidor de potencia"}`);
+  L.push(`JANELA: ${a.dias} dias ate ${a.gerado_em} | ${r.n_atividades} atividades (${r.n_ciclismo} pedais, ${r.n_forca} forca) | ${r.horas_total}h | ACWR atual ${r.acwr_atual}`);
+  L.push(`SAUDE (media 30d): sono ${sd.media_sono_30d}h, stress ${sd.media_stress_30d}, passos ${sd.media_passos_30d}, cal ativas ${sd.media_cal_ativas_30d}`);
   const z=a.zonas_fc||{}; const tot=Object.values(z).reduce((x,y)=>x+y,0)||1;
-  if(Object.keys(z).length) L.push("ZONAS FC: "+Object.entries(z).map(([k,v])=>`${k} ${Math.round(100*v/tot)}%`).join(", "));
-  (a.mensal||[]).forEach(m=>L.push(`  ${m.mes}: carga ${m.carga}, pedal ${m.ciclismo_h}h, forca ${m.forca_n}, VO2 ${m.vo2}, FCrep ${m.fc_repouso}, sono ${m.sono_h}h, stress ${m.stress}`));
-  (a.plano||[]).slice(0,8).forEach(it=>L.push(`  [${it.nivel}] ${it.titulo}: ${it.texto}`));
+  if(Object.keys(z).length) L.push("TEMPO POR ZONA DE FC: "+Object.entries(z).map(([k,v])=>`${k} ${Math.round(100*v/tot)}%`).join(", "));
+  // semana a semana (ultimas 12)
+  try{
+    const sem=_bucketsJS("sem").slice(-12);
+    L.push("SEMANA A SEMANA (ultimas 12; semana inicia seg):");
+    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h, stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, VO2 ${b.vo2??"-"}`));
+  }catch(e){}
+  // atividades recentes detalhadas (ultimas 15)
+  const ats=(a.ativs||[]).slice(-15);
+  if(ats.length){
+    L.push("ATIVIDADES RECENTES (mais novas por ultimo):");
+    ats.forEach(x=>{
+      const partes=[`${x.d} ${x.cat}`, `${(x.h*60).toFixed(0)}min`];
+      if(x.km) partes.push(`${x.km}km`);
+      if(x.hr) partes.push(`FCmed ${x.hr}${x.hrmax?("/max "+x.hrmax):""}`);
+      if(x.pot) partes.push(`pot ${x.pot}W${x.np?("/NP "+x.np):""}`);
+      if(x.cad) partes.push(`cad ${x.cad}`);
+      if(x.te) partes.push(`TE ${x.te}`);
+      if(x.carga) partes.push(`carga ${x.carga}`);
+      if(x.cal) partes.push(`${x.cal}kcal`);
+      L.push("  "+partes.join(", "));
+    });
+  }
+  (a.plano||[]).slice(0,8).forEach(it=>L.push(`SINAL [${it.nivel}] ${it.titulo}: ${it.texto}`));
   return L.join("\n");
 }
 
@@ -48,6 +81,25 @@ async function gerarAvaliacao(){
   return texto;
 }
 
+/* ---------- periodos ---------- */
+let GRANP="mes";
+function wkKeyG(d){const t=new Date(d+"T00:00:00");const o=(t.getDay()+6)%7;t.setDate(t.getDate()-o);return t.toISOString().slice(0,10);}
+function keyFnG(g){
+  if(g==="sem")return wkKeyG;
+  if(g==="mes")return d=>d.slice(0,7);
+  if(g==="tri")return d=>d.slice(0,4)+"-T"+(Math.floor((+d.slice(5,7)-1)/3)+1);
+  if(g==="ano")return d=>d.slice(0,4);
+  return ()=>"Tudo";
+}
+const MESN=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+function rotuloG(k,g){
+  if(g==="sem"){const p=k.split("-");return p[2]+"/"+p[1];}
+  if(g==="mes"){const p=k.split("-");return MESN[(+p[1])-1]+"/"+p[0].slice(2);}
+  if(g==="tri"){const p=k.split("-T");return p[1]+"o tri/"+p[0].slice(2);}
+  if(g==="ano")return k;
+  return "Tudo";
+}
+
 /* ---------- render painel ---------- */
 let charts=[];
 function destroyCharts(){charts.forEach(c=>c.destroy());charts=[];}
@@ -59,19 +111,20 @@ function renderPainel(){
     ["ACWR",r.acwr_atual!=null?Number(r.acwr_atual).toFixed(2):"--"],
     ["Sono 30d",sd.media_sono_30d!=null?sd.media_sono_30d+"h":"--"],["Stress 30d",sd.media_stress_30d??"--"]];
   $("kpis").innerHTML=kp.map(([l,v])=>`<div class="kpi"><div class="v">${v??"--"}</div><div class="l">${l}</div></div>`).join("");
-  const M=ANALISE.mensal||[];
-  const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-  const rot=m=>{const p=m.split("-");return nm[(+p[1])-1]+"/"+p[0].slice(2);};
-  const linhas=[["Pedais",x=>x.ciclismo_n],["Pedal h",x=>x.ciclismo_h],["Forca",x=>x.forca_n],["Carga",x=>x.carga],["VO2",x=>x.vo2],["FC rep",x=>x.fc_repouso],["Sono h",x=>x.sono_h],["Stress",x=>x.stress]];
-  let th="<tr><th></th>"+M.map(m=>`<th>${rot(m.mes)}</th>`).join("")+"</tr>";
-  let body=linhas.map(([lab,g])=>`<tr><td class="rowlab">${lab}</td>`+M.map(m=>`<td>${g(m)??"--"}</td>`).join("")+"</tr>").join("");
+
+  const B=_bucketsJS(GRANP);
+  const linhas=[["Pedais",b=>b.cic_n],["Pedal h",b=>+b.cic_h.toFixed(1)],["Forca",b=>b.for_n],
+    ["km",b=>Math.round(b.km)],["Carga",b=>Math.round(b.carga)],["VO2",b=>b.vo2],
+    ["FC rep",b=>avgN(b.fcrep)],["Sono h",b=>avgN(b.sono)],["Stress",b=>avgN(b.stress)]];
+  const lab=B.map(b=>rotuloG(b.k,GRANP));
+  let th="<tr><th></th>"+lab.map(x=>`<th>${x}</th>`).join("")+"</tr>";
+  let body=linhas.map(([t,g])=>`<tr><td class="rowlab">${t}</td>`+B.map(b=>`<td>${g(b)??"--"}</td>`).join("")+"</tr>").join("");
   $("tabela").innerHTML=`<table>${th}${body}</table>`;
   destroyCharts();
-  const L=M.map(m=>rot(m.mes));
-  charts.push(new Chart($("cCarga"),{type:"bar",data:{labels:L,datasets:[{data:M.map(m=>m.carga),backgroundColor:"#38bdf8"}]},options:{plugins:{legend:{display:false}}}}));
-  charts.push(new Chart($("cSaude"),{type:"line",data:{labels:L,datasets:[
-    {label:"Sono (h)",data:M.map(m=>m.sono_h),borderColor:"#818cf8"},
-    {label:"Stress",data:M.map(m=>m.stress),borderColor:"#fb7185",yAxisID:"y2"}]},
+  charts.push(new Chart($("cCarga"),{type:"bar",data:{labels:lab,datasets:[{data:B.map(b=>Math.round(b.carga)),backgroundColor:"#38bdf8"}]},options:{plugins:{legend:{display:false}}}}));
+  charts.push(new Chart($("cSaude"),{type:"line",data:{labels:lab,datasets:[
+    {label:"Sono (h)",data:B.map(b=>avgN(b.sono)),borderColor:"#818cf8",spanGaps:true},
+    {label:"Stress",data:B.map(b=>avgN(b.stress)),borderColor:"#fb7185",yAxisID:"y2",spanGaps:true}]},
     options:{scales:{y2:{position:"right",grid:{drawOnChartArea:false}}}}}));
 }
 
@@ -155,6 +208,8 @@ $("enviar").onclick=()=>{const t=$("q").value.trim();if(!t)return;$("q").value="
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("enviar").click();}});
 $("salvarKey").onclick=()=>{localStorage.setItem(KEYLS,$("apikey").value.trim());$("apikey").type="password";alert("Chave salva neste aparelho.");renderCoach();};
 $("gerarAval").onclick=async()=>{ $("avalMsg").textContent="Gerando..."; try{await gerarAvaliacao();await renderCoach();showTab("painel");$("avalMsg").textContent="Pronto!";}catch(e){$("avalMsg").textContent="Erro: "+e.message;} };
+
+document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dataset.g;if(!g)return;GRANP=g;[...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on",x.dataset.g===g));renderPainel();});
 
 sb.auth.onAuthStateChange((_e,session)=>{ if(session) entrar(session); else deslogado(); });
 (async()=>{ const {data:{session}}=await sb.auth.getSession(); if(session) entrar(session); else deslogado();
