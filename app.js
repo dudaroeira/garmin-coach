@@ -10,7 +10,8 @@ Jeito: portugues do Brasil, caloroso, direto e motivador; especifico e acionavel
 Seguranca: nao e medico (diante de dor/sintomas, oriente buscar profissional); nunca recomende doping ou praticas de risco; se faltar dado, diga o que observar sem inventar.
 Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
 
-let UID = null, ANALISE = null, SNAP_AT = null;
+const UID_FIXO="11dd4f4a-634a-48bf-a5a7-c12220c3b22d";
+let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
 
 function _bucketsJS(gran){
   const kf=keyFnG(gran), m=new Map();
