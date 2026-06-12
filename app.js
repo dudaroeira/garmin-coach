@@ -10,17 +10,17 @@ const sinceVal=()=>localStorage.getItem(KEYSINCE)||"";
 const SYSTEM = `Voce e um treinador pessoal experiente em ciclismo e treino de forca, com base cientifica (fisiologia, periodizacao, treino polarizado, forca para ciclistas, recuperacao, sono, gestao de carga). Acompanha UM atleta de forma proxima e continua.
 Jeito: portugues do Brasil, caloroso, direto e motivador; especifico e acionavel; honesto; usa os DADOS fornecidos; LEMBRA do historico e dos seus conselhos anteriores fazendo continuidade; prioriza recuperacao/sono/prevencao de lesao.
 Seguranca: nao e medico (diante de dor/sintomas, oriente buscar profissional); nunca recomende doping ou praticas de risco; se faltar dado, diga o que observar sem inventar.
-Comente explicitamente o SLEEP SCORE e o BODY BATTERY da semana (recuperacao). Faca observacoes INDIVIDUAIS sobre as atividades mais relevantes da semana (cite a atividade pelo nome e o que achou) e COMPARE sessoes da mesma modalidade entre si e ao longo das semanas para mostrar evolucao. Ao comentar uma atividade, refira-se a ela pela DATA (ex.: 'no pedal de 05/06...'). Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
+Comente explicitamente o SLEEP SCORE, o BODY BATTERY (pico do dia) e a HRV da semana como marcadores de recuperacao. Faca observacoes INDIVIDUAIS sobre as atividades mais relevantes da semana (cite a atividade pelo nome e o que achou) e COMPARE sessoes da mesma modalidade entre si e ao longo das semanas para mostrar evolucao. Ao comentar uma atividade, refira-se a ela pela DATA (ex.: 'no pedal de 05/06...'). Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
 
 const UID_FIXO="11dd4f4a-634a-48bf-a5a7-c12220c3b22d";
 let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
 
 function _bucketsJS(gran){
   const kf=keyFnG(gran), m=new Map();
-  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
+  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],hrv:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
   for(const r of (ANALISE.daily||[])){const b=E(kf(r.d)); b.carga+=r.carga||0;
     if(r.sono!=null)b.sono.push(r.sono); if(r.sono_score!=null)b.sscore.push(r.sono_score); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);
-    if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa);}
+    if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa); if(r.hrv!=null)b.hrv.push(r.hrv);}
   for(const x of (ANALISE.ativs||[])){const b=E(kf(x.d));
     if(x.cat==="ciclismo"){b.cic_h+=x.h;b.cic_n++;b.km+=x.km||0;} else if(x.cat==="forca"){b.for_h+=x.h;b.for_n++;}}
   for(const v of (ANALISE.vo2_xy||[])){const k=kf(v.d); if(m.has(k))m.get(k).vo2=v.v;}
@@ -41,7 +41,7 @@ function digest(a){
     const hojeWk=wkKeyG(a.gerado_em||new Date().toISOString().slice(0,10));
     const sem=_bucketsJS("sem").filter(b=>b.k!==hojeWk).slice(-12);
     L.push("SEMANA A SEMANA (apenas semanas COMPLETAS; a semana em curso foi omitida):");
-    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery ${avgN(b.bbb)??"-"}-${avgN(b.bba)??"-"}, VO2 ${b.vo2??"-"}`));
+    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery pico-medio ${avgN(b.bba)??"-"} (vale ${avgN(b.bbb)??"-"}), HRV ${avgN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
   }catch(e){}
   // atividades recentes detalhadas (ultimas 15)
   const ats=(a.ativs||[]).slice(-20);
