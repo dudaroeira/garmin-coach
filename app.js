@@ -44,7 +44,7 @@ function digest(a){
     sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery pico-medio ${avgN(b.bba)??"-"} (vale ${avgN(b.bbb)??"-"}), HRV ${avgN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
   }catch(e){}
   // atividades recentes detalhadas (ultimas 15)
-  const ats=(a.ativs||[]).slice(-20);
+  const ats=(a.ativs||[]).slice().sort((x,y)=>(x.d<y.d?-1:(x.d>y.d?1:0))).slice(-20);
   if(ats.length){
     L.push("ATIVIDADES RECENTES (mais novas por ultimo):");
     ats.forEach(x=>{
