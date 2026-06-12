@@ -4,20 +4,23 @@ const CFG = window.CFG;
 const sb = supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 const KEYLS = "coach_api_key";
+const KEYSINCE = "conv_since";
+const sinceVal=()=>localStorage.getItem(KEYSINCE)||"";
 
 const SYSTEM = `Voce e um treinador pessoal experiente em ciclismo e treino de forca, com base cientifica (fisiologia, periodizacao, treino polarizado, forca para ciclistas, recuperacao, sono, gestao de carga). Acompanha UM atleta de forma proxima e continua.
 Jeito: portugues do Brasil, caloroso, direto e motivador; especifico e acionavel; honesto; usa os DADOS fornecidos; LEMBRA do historico e dos seus conselhos anteriores fazendo continuidade; prioriza recuperacao/sono/prevencao de lesao.
 Seguranca: nao e medico (diante de dor/sintomas, oriente buscar profissional); nunca recomende doping ou praticas de risco; se faltar dado, diga o que observar sem inventar.
-Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
+Comente explicitamente o SLEEP SCORE e o BODY BATTERY da semana (recuperacao). Faca observacoes INDIVIDUAIS sobre as atividades mais relevantes da semana (cite a atividade e o que achou). Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
 
 const UID_FIXO="11dd4f4a-634a-48bf-a5a7-c12220c3b22d";
 let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
 
 function _bucketsJS(gran){
   const kf=keyFnG(gran), m=new Map();
-  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],stress:[],fcrep:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
+  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
   for(const r of (ANALISE.daily||[])){const b=E(kf(r.d)); b.carga+=r.carga||0;
-    if(r.sono!=null)b.sono.push(r.sono); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);}
+    if(r.sono!=null)b.sono.push(r.sono); if(r.sono_score!=null)b.sscore.push(r.sono_score); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);
+    if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa);}
   for(const x of (ANALISE.ativs||[])){const b=E(kf(x.d));
     if(x.cat==="ciclismo"){b.cic_h+=x.h;b.cic_n++;b.km+=x.km||0;} else if(x.cat==="forca"){b.for_h+=x.h;b.for_n++;}}
   for(const v of (ANALISE.vo2_xy||[])){const k=kf(v.d); if(m.has(k))m.get(k).vo2=v.v;}
@@ -38,10 +41,10 @@ function digest(a){
     const hojeWk=wkKeyG(a.gerado_em||new Date().toISOString().slice(0,10));
     const sem=_bucketsJS("sem").filter(b=>b.k!==hojeWk).slice(-12);
     L.push("SEMANA A SEMANA (apenas semanas COMPLETAS; a semana em curso foi omitida):");
-    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h, stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, VO2 ${b.vo2??"-"}`));
+    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery ${avgN(b.bbb)??"-"}-${avgN(b.bba)??"-"}, VO2 ${b.vo2??"-"}`));
   }catch(e){}
   // atividades recentes detalhadas (ultimas 15)
-  const ats=(a.ativs||[]).slice(-15);
+  const ats=(a.ativs||[]).slice(-20);
   if(ats.length){
     L.push("ATIVIDADES RECENTES (mais novas por ultimo):");
     ats.forEach(x=>{
@@ -78,7 +81,7 @@ function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slic
 
 async function gerarAvaliacao(){
   const hist=await getHistorico();
-  const texto=await callClaude(contexto(hist),[{role:"user",content:"Considere apenas semanas COMPLETAS (ignore a semana em curso, que e parcial). Faca a AVALIACAO seguindo as secoes, incluindo a secao Evolucao do perfil com FC de repouso, VO2max, FTP e FC max atuais e como mudaram desde a ultima avaliacao. De continuidade aos seus conselhos anteriores (verificando o que foi seguido)."}],1600);
+  const texto=await callClaude(contexto(hist),[{role:"user",content:"Considere apenas semanas COMPLETAS (ignore a semana em curso). Comente o sleep score e o body battery da ultima semana completa, e comente individualmente as atividades mais relevantes dela. Faca a AVALIACAO seguindo as secoes, incluindo a secao Evolucao do perfil com FC de repouso, VO2max, FTP e FC max atuais e como mudaram desde a ultima avaliacao. De continuidade aos seus conselhos anteriores (verificando o que foi seguido)."}],1600);
   await sb.from("coach_history").insert({user_id:UID,resumo:Object.assign({},ANALISE?.resumo||{},{perfil:ANALISE?.perfil||{}}),texto});
   return texto;
 }
@@ -170,15 +173,21 @@ function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt
 
 /* ---------- chat ---------- */
 function addMsg(role,txt){const d=document.createElement("div");d.className="msg "+(role==="user"?"u":"a");d.textContent=txt;$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight;return d;}
+function addSep(diaISO){const p=diaISO.split("-");const d=document.createElement("div");d.className="sep";d.textContent=p[2]+"/"+p[1]+"/"+p[0];$("chat").appendChild(d);}
 async function carregarConversa(){
-  const {data}=await sb.from("conversations").select("role,content").eq("user_id",UID).order("criado_em",{ascending:true}).limit(40);
-  $("chat").innerHTML=""; (data||[]).forEach(m=>addMsg(m.role,m.content));
+  let q=sb.from("conversations").select("role,content,criado_em").eq("user_id",UID).order("criado_em",{ascending:true}).limit(80);
+  const since=sinceVal(); if(since) q=q.gte("criado_em",since);
+  const {data}=await q;
+  $("chat").innerHTML=""; let lastDay="";
+  (data||[]).forEach(m=>{ const day=(m.criado_em||"").slice(0,10); if(day&&day!==lastDay){addSep(day);lastDay=day;} addMsg(m.role,m.content); });
   if(!data||!data.length) addMsg("assistant","Opa! Sou seu treinador. Pergunte sobre sua semana, recuperacao ou o que treinar. Eu lembro do seu historico.");
 }
 async function enviarChat(texto){
   addMsg("user",texto); const pend=addMsg("assistant","...");
   try{
-    const {data:conv}=await sb.from("conversations").select("role,content").eq("user_id",UID).order("criado_em",{ascending:true}).limit(20);
+    let cq=sb.from("conversations").select("role,content").eq("user_id",UID).order("criado_em",{ascending:true}).limit(20);
+    const _s=sinceVal(); if(_s) cq=cq.gte("criado_em",_s);
+    const {data:conv}=await cq;
     const hist=await getHistorico();
     const msgs=[...(conv||[]).map(c=>({role:c.role,content:c.content})),{role:"user",content:texto}];
     const resp=await callClaude(contexto(hist),msgs,1200);
@@ -231,6 +240,7 @@ $("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.prevent
 $("salvarKey").onclick=()=>{localStorage.setItem(KEYLS,$("apikey").value.trim());$("apikey").type="password";alert("Chave salva neste aparelho.");renderCoach();};
 $("gerarAval").onclick=async()=>{ $("avalMsg").textContent="Gerando..."; try{await gerarAvaliacao();await renderCoach();showTab("painel");$("avalMsg").textContent="Pronto!";}catch(e){$("avalMsg").textContent="Erro: "+e.message;} };
 
+const nc=document.getElementById("novaConv"); if(nc) nc.addEventListener("click",()=>{localStorage.setItem(KEYSINCE,new Date().toISOString());carregarConversa();});
 document.getElementById("prevP").addEventListener("click",()=>{OFFP++;renderPainel();});
 document.getElementById("nextP").addEventListener("click",()=>{OFFP--;renderPainel();});
 document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dataset.g;if(!g)return;GRANP=g;OFFP=0;[...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on",x.dataset.g===g));renderPainel();});
