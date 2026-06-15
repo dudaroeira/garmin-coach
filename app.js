@@ -81,7 +81,10 @@ function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slic
 
 async function gerarAvaliacao(){
   const hist=await getHistorico();
-  const texto=await callClaude(contexto(hist),[{role:"user",content:"Considere apenas semanas COMPLETAS (ignore a semana em curso). Comente o sleep score e o body battery da ultima semana completa. Liste e comente UMA POR UMA todas as atividades dessa semana (pela data e nome), nao apenas as mais relevantes -- cada uma em ate 2-3 linhas, e NAO corte a lista (cubra TODAS antes de terminar). Faca a AVALIACAO seguindo as secoes, incluindo a secao Evolucao do perfil com FC de repouso, VO2max, FTP e FC max atuais e como mudaram desde a ultima avaliacao. De continuidade aos seus conselhos anteriores (verificando o que foi seguido)."}],4000);
+  const ctx=contexto(hist);
+  const t1=await callClaude(ctx,[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA (apenas semana COMPLETA) com as secoes: Como foi a semana / Evolucao do perfil (FC repouso, VO2max, FTP, FC max, sleep score, body battery pico do dia, HRV, comparando com antes) / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho. NAO analise treino-a-treino aqui (vem em secao separada). De continuidade aos seus conselhos anteriores."}],2500);
+  const t2=await callClaude(ctx,[{role:"user",content:"Analise UMA POR UMA, sem cortar, TODAS as atividades da ultima semana COMPLETA. Para cada uma: cite a data e o nome e, em 2-4 linhas, comente FC media/max, carga, cadencia/potencia e training effect quando houver, comparando com sessoes semelhantes. Comece direto pela primeira atividade, sem introducao."}],3500);
+  const texto=t1+"\n\n---\n\n## Analise das atividades (treino a treino) \ud83c\udfcb\ufe0f\n\n"+t2;
   await sb.from("coach_history").insert({user_id:UID,resumo:Object.assign({},ANALISE?.resumo||{},{perfil:ANALISE?.perfil||{}}),texto});
   return texto;
 }
