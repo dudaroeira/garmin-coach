@@ -160,16 +160,10 @@ async function renderCoach(){
   const box=$("coachBox");
   const hist=await getHistorico();
   const ultima=hist[hist.length-1];
-  const temData=!!ANALISE;
-  const dadosNovos = temData && SNAP_AT && (!ultima || new Date(SNAP_AT) > new Date(ultima.criado_em));
-  if(localStorage.getItem(KEYLS) && temData && dadosNovos){
-    box.innerHTML=`<div class="coach">Gerando avaliacao da semana...</div>`;
-    try{ const t=await gerarAvaliacao(); box.innerHTML=`<div class="coach">${escapeHtml(t)}</div>`; }
-    catch(e){ box.innerHTML=`<div class="coach">${ultima?escapeHtml(ultima.texto):"Nao consegui gerar: "+escapeHtml(String(e))}</div>`; }
-  } else if(ultima){
+  if(ultima){
     box.innerHTML=`<div class="coach">${escapeHtml(ultima.texto)}</div>`;
   } else {
-    box.innerHTML=`<div class="coach dim">Configure a chave da IA em Ajustes para receber a avaliacao da semana.</div>`;
+    box.innerHTML=`<div class="coach dim">Ainda nao ha avaliacao. Va em Ajustes e toque em "Gerar avaliacao da semana".</div>`;
   }
 }
 function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
