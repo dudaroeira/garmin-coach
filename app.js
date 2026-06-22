@@ -42,7 +42,7 @@ function digest(a){
     const sem=_bucketsJS("sem").filter(b=>b.k!==hojeWk).slice(-12);
     L.push("SEMANA A SEMANA (apenas semanas COMPLETAS; a semana em curso foi omitida):");
     sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery pico-medio ${avgN(b.bba)??"-"} (vale ${avgN(b.bbb)??"-"}), HRV ${avgN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
-  }catch(e){}
+  }catch(e){ console.error("digest semana-a-semana falhou:",e); }
   // atividades recentes detalhadas (ultimas 15)
   const ats=(a.ativs||[]).slice().sort((x,y)=>(x.d<y.d?-1:(x.d>y.d?1:0))).slice(-20);
   if(ats.length){
@@ -76,7 +76,7 @@ async function callClaude(system, messages, maxTokens){
   return (j.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
 }
 
-async function getHistorico(){ const {data}=await sb.from("coach_history").select("criado_em,texto").eq("user_id",UID).order("criado_em",{ascending:true}).limit(8); return data||[]; }
+async function getHistorico(){ const {data}=await sb.from("coach_history").select("criado_em,texto").eq("user_id",UID).order("criado_em",{ascending:false}).limit(8); return (data||[]).reverse(); }
 function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slice(0,10)} ---\n${x.texto}`).join("\n")||"Sem aconselhamentos anteriores."; return `${SYSTEM}\n\n=== DADOS ATUAIS ===\n${digest(ANALISE)}\n\n=== ACONSELHAMENTOS ANTERIORES ===\n${h}`; }
 
 async function gerarAvaliacao(){
@@ -120,7 +120,13 @@ function renderPainel(){
   const kp=[["Atividades",r.n_atividades],["Pedais",r.n_ciclismo],["Forca",r.n_forca],
     ["ACWR",r.acwr_atual!=null?Number(r.acwr_atual).toFixed(2):"--"],
     ["Sono 30d",sd.media_sono_30d!=null?sd.media_sono_30d+"h":"--"],["Stress 30d",sd.media_stress_30d??"--"]];
-  $("kpis").innerHTML=kp.map(([l,v])=>`<div class="kpi"><div class="v">${v??"--"}</div><div class="l">${l}</div></div>`).join("");
+  const kpiBox=$("kpis"); kpiBox.replaceChildren();
+  for(const [l,v] of kp){
+    const c=document.createElement("div"); c.className="kpi";
+    const dv=document.createElement("div"); dv.className="v"; dv.textContent=(v??"--");
+    const dl=document.createElement("div"); dl.className="l"; dl.textContent=l;
+    c.append(dv,dl); kpiBox.appendChild(c);
+  }
 
   const Ball=_bucketsJS(GRANP);
   const LIM={dia:7,sem:5,mes:12,tri:8,ano:99,tudo:9999};
@@ -145,9 +151,17 @@ function renderPainel(){
   const cap={dia:"dia",sem:"semana",mes:"mes",tri:"trimestre",ano:"ano",tudo:"mes"}[GRANP];
   const capEl=document.getElementById("capPeriodo"); if(capEl) capEl.textContent="Cada coluna = 1 "+cap+" \u00b7 mostrando "+B.length+(Ball.length>B.length?(" de "+Ball.length):"");
   const lab=B.map(b=>rotuloG(b.k,GRANP));
-  let th="<tr><th></th>"+lab.map(x=>`<th>${x}</th>`).join("")+"</tr>";
-  let body=linhas.map(([t,g])=>`<tr><td class="rowlab">${t}</td>`+B.map(b=>`<td>${g(b)??"--"}</td>`).join("")+"</tr>").join("");
-  $("tabela").innerHTML=`<table>${th}${body}</table>`;
+  const tbl=document.createElement("table");
+  const trh=document.createElement("tr"); trh.appendChild(document.createElement("th"));
+  lab.forEach(x=>{const th=document.createElement("th");th.textContent=x;trh.appendChild(th);});
+  tbl.appendChild(trh);
+  linhas.forEach(([t,g])=>{
+    const tr=document.createElement("tr");
+    const td0=document.createElement("td"); td0.className="rowlab"; td0.textContent=t; tr.appendChild(td0);
+    B.forEach(b=>{const td=document.createElement("td");const v=g(b);td.textContent=(v??"--");tr.appendChild(td);});
+    tbl.appendChild(tr);
+  });
+  $("tabela").replaceChildren(tbl);
   destroyCharts();
   charts.push(new Chart($("cCarga"),{type:"bar",data:{labels:lab,datasets:[{data:B.map(b=>Math.round(b.carga)),backgroundColor:"#38bdf8"}]},options:{plugins:{legend:{display:false}}}}));
   charts.push(new Chart($("cSaude"),{type:"line",data:{labels:lab,datasets:[
@@ -160,13 +174,11 @@ async function renderCoach(){
   const box=$("coachBox");
   const hist=await getHistorico();
   const ultima=hist[hist.length-1];
-  if(ultima){
-    box.innerHTML=`<div class="coach">${escapeHtml(ultima.texto)}</div>`;
-  } else {
-    box.innerHTML=`<div class="coach dim">Ainda nao ha avaliacao. Va em Ajustes e toque em "Gerar avaliacao da semana".</div>`;
-  }
+  const d=document.createElement("div");
+  if(ultima){ d.className="coach"; d.textContent=ultima.texto; }
+  else { d.className="coach dim"; d.textContent='Ainda nao ha avaliacao. Va em Ajustes e toque em "Gerar avaliacao da semana".'; }
+  box.replaceChildren(d);
 }
-function escapeHtml(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
 
 /* ---------- chat ---------- */
 function addMsg(role,txt){const d=document.createElement("div");d.className="msg "+(role==="user"?"u":"a");d.textContent=txt;$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight;return d;}
@@ -175,7 +187,7 @@ async function carregarConversa(){
   let q=sb.from("conversations").select("role,content,criado_em").eq("user_id",UID).order("criado_em",{ascending:true}).limit(80);
   const since=sinceVal(); if(since) q=q.gte("criado_em",since);
   const {data}=await q;
-  $("chat").innerHTML=""; let lastDay="";
+  $("chat").replaceChildren(); let lastDay="";
   (data||[]).forEach(m=>{ const day=(m.criado_em||"").slice(0,10); if(day&&day!==lastDay){addSep(day);lastDay=day;} addMsg(m.role,m.content); });
   if(!data||!data.length) addMsg("assistant","Opa! Sou seu treinador. Pergunte sobre sua semana, recuperacao ou o que treinar. Eu lembro do seu historico.");
 }
@@ -250,5 +262,5 @@ document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dat
   const ak=document.getElementById("apikey"); if(ak) ak.value=localStorage.getItem(KEYLS)||"";
   const uidEl=document.getElementById("uid"); if(uidEl) uidEl.textContent=UID;
   await carregarTudo();
-  if("serviceWorker" in navigator){ try{ await navigator.serviceWorker.register("sw.js"); }catch(e){} }
+  if("serviceWorker" in navigator){ try{ await navigator.serviceWorker.register("sw.js"); }catch(e){ console.error("registro do service worker falhou:",e); } }
 })();
