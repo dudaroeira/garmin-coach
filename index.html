@@ -1,113 +1,241 @@
 <!DOCTYPE html><html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#0b1220">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Garmin Coach</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
- :root{--bg:#0f172a;--card:#1e293b;--txt:#e2e8f0;--mut:#94a3b8;--acc:#38bdf8;}
- html,body{overflow-x:hidden;max-width:100%;} *{box-sizing:border-box;min-width:0;}
- body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
- canvas{max-width:100%!important;} img,svg,table{max-width:100%;} body{margin:0;width:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,sans-serif;}
- header{padding:14px 16px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center;}
- header b{font-size:16px;} .tabbar{display:flex;gap:6px;padding:8px 12px;position:sticky;top:0;background:var(--bg);border-bottom:1px solid #334155;}
- .tabbar button{flex:1;background:var(--card);color:var(--mut);border:0;border-radius:10px;padding:10px;font-size:13px;}
- .tabbar button.on{background:var(--acc);color:#04293f;font-weight:700;}
- main{padding:14px 12px;max-width:760px;margin:0 auto;width:100%;} .hide{display:none;}
- .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-bottom:16px;}
- .kpi{background:var(--card);border-radius:12px;padding:12px;} .kpi .v{font-size:20px;font-weight:700;} .kpi .l{font-size:11px;color:var(--mut);}
- .card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:14px;}
- .coach{background:linear-gradient(135deg,#172554,#1e293b);border:1px solid #1d4ed8;border-radius:12px;padding:16px;white-space:pre-wrap;line-height:1.6;font-size:14px;}
- h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--acc);margin:18px 0 8px;}
- table{width:100%;border-collapse:collapse;font-size:12px;} th,td{padding:6px 7px;border-bottom:1px solid #334155;text-align:center;white-space:nowrap;} .rowlab{text-align:left;color:var(--mut);}
- input,button,textarea{font-family:inherit;} .in{width:100%;background:#0b1220;color:var(--txt);border:1px solid #334155;border-radius:10px;padding:11px;font-size:14px;}
- .btn{background:var(--acc);color:#04293f;border:0;border-radius:10px;padding:11px 16px;font-weight:700;}
+ :root{
+   --bg:#0b1220; --bg-soft:#0f172a;
+   --card:rgba(22,32,52,.72); --card-solid:#161f33; --line:rgba(148,163,184,.14);
+   --txt:#eaf1f9; --mut:#90a4bd; --mut2:#6b7f98;
+   --acc:#22d3ee; --acc2:#3b82f6; --ink:#042234;
+   --grad:linear-gradient(135deg,#22d3ee 0%,#3b82f6 100%);
+   --shadow:0 10px 30px rgba(2,8,20,.45);
+   --r:18px;
+ }
+ *{box-sizing:border-box;min-width:0;}
+ html,body{overflow-x:hidden;max-width:100%;}
+ body{
+   margin:0;width:100%;color:var(--txt);
+   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+   -webkit-font-smoothing:antialiased;letter-spacing:.1px;
+   background:
+     radial-gradient(1100px 560px at 50% -12%, #1a3056 0%, rgba(15,23,42,0) 60%),
+     radial-gradient(900px 500px at 100% 0%, #15294a 0%, rgba(15,23,42,0) 55%),
+     var(--bg);
+   background-attachment:fixed;
+   padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
+ }
+ canvas{max-width:100%!important;max-height:230px;} img,svg,table{max-width:100%;}
+ .hide{display:none!important;}
+
+ /* ---------- header ---------- */
+ header{
+   position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:11px;
+   padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+   background:rgba(11,18,32,.72);backdrop-filter:saturate(160%) blur(14px);
+   -webkit-backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--line);
+ }
+ .logo{width:34px;height:34px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;
+   background:var(--grad);box-shadow:0 6px 16px rgba(34,211,238,.35);}
+ .logo svg{width:20px;height:20px;display:block;}
+ .brand{display:flex;flex-direction:column;line-height:1.05;}
+ .brand b{font-size:16px;font-weight:800;letter-spacing:.2px;}
+ .brand span{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;}
+ header .spacer{flex:1;}
+ .ghost{background:rgba(148,163,184,.12);color:var(--txt);border:1px solid var(--line);
+   border-radius:11px;padding:9px 13px;font-size:13px;font-weight:600;}
+
+ /* ---------- layout ---------- */
+ main{padding:16px 13px 110px;max-width:760px;margin:0 auto;width:100%;}
+ h2{font-size:11.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mut);
+   margin:22px 4px 9px;display:flex;align-items:center;gap:8px;font-weight:700;}
+ h2::before{content:"";width:14px;height:2.5px;border-radius:2px;background:var(--grad);}
+
+ .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+   padding:16px;margin-bottom:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+   box-shadow:var(--shadow);}
+
+ /* ---------- KPIs ---------- */
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(98px,1fr));gap:10px;margin-bottom:6px;}
+ .kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);
+   border-radius:15px;padding:13px 13px 12px;box-shadow:var(--shadow);}
+ .kpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--grad);opacity:.9;}
+ .kpi .v{font-size:23px;font-weight:800;letter-spacing:.3px;line-height:1.1;}
+ .kpi .l{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:600;}
+
+ /* ---------- coach ---------- */
+ .coach{position:relative;background:
+     linear-gradient(150deg, rgba(34,211,238,.10), rgba(59,130,246,.06) 45%, rgba(22,32,52,.6)),
+     var(--card-solid);
+   border:1px solid rgba(59,130,246,.32);border-radius:var(--r);padding:17px 16px 16px;
+   white-space:pre-wrap;line-height:1.62;font-size:14px;box-shadow:var(--shadow);overflow:hidden;}
+ .coach::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad);}
+ .coach.dim{color:var(--mut);font-size:13px;white-space:normal;border-style:dashed;}
+
+ /* ---------- segmented (periodo) ---------- */
+ .seg{display:flex;gap:4px;background:rgba(15,23,42,.55);border:1px solid var(--line);
+   border-radius:13px;padding:4px;margin:4px 0 12px;flex-wrap:wrap;}
+ .seg button{flex:1;min-width:54px;background:transparent;color:var(--mut);border:0;border-radius:9px;
+   padding:9px 6px;font-size:12px;font-weight:600;transition:.18s;cursor:pointer;}
+ .seg button.on{background:var(--grad);color:var(--ink);font-weight:800;box-shadow:0 4px 12px rgba(34,211,238,.3);}
+ #navP{background:transparent;border:0;padding:0;margin:2px 0 10px;gap:8px;}
+ #navP button{flex:0 0 auto;min-width:0;background:rgba(148,163,184,.12);border:1px solid var(--line);
+   color:var(--txt);border-radius:10px;padding:8px 13px;}
+ #navP button:disabled{opacity:.35;}
+ #lblP{flex:1;text-align:center;align-self:center;font-size:12.5px;color:var(--txt);font-weight:600;}
+ #capPeriodo{margin:0 4px 8px;font-size:11.5px;color:var(--mut2);}
+
+ /* ---------- table ---------- */
+ .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
+ table{width:100%;border-collapse:collapse;font-size:12px;}
+ th,td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;}
+ thead th,tr:first-child th{color:var(--mut);font-weight:700;font-size:11px;}
+ .rowlab{text-align:left;color:var(--mut);font-weight:600;}
+ tbody tr:last-child td,table tr:last-child td{border-bottom:0;}
+
+ /* ---------- inputs / buttons ---------- */
+ input,button,textarea{font-family:inherit;}
+ .in{width:100%;background:rgba(8,14,26,.7);color:var(--txt);border:1px solid var(--line);
+   border-radius:12px;padding:12px;font-size:14px;outline:none;transition:.18s;}
+ .in:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(34,211,238,.16);}
+ .btn{background:var(--grad);color:var(--ink);border:0;border-radius:12px;padding:12px 17px;
+   font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(34,211,238,.28);transition:.18s;}
+ .btn:active{transform:translateY(1px);}
+ .btn.sec{background:rgba(148,163,184,.14);color:var(--txt);border:1px solid var(--line);box-shadow:none;}
+ .dim{color:var(--mut);font-size:12px;line-height:1.55;}
+ code{background:rgba(8,14,26,.7);padding:3px 7px;border-radius:7px;font-size:12px;color:var(--acc);
+   word-break:break-all;}
+
+ /* ---------- chat ---------- */
  #t-treinador{max-width:100%;overflow-x:hidden;}
- #chat{display:flex;flex-direction:column;gap:10px;min-height:50vh;max-width:100%;}
- .sep{align-self:center;color:var(--mut);font-size:11px;margin:8px 0 2px;}
- .msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;}
- .msg.u{align-self:flex-end;background:var(--acc);color:#04293f;} .msg.a{align-self:flex-start;background:var(--card);}
- .chatform{display:flex;gap:8px;align-items:flex-end;position:sticky;bottom:0;background:var(--bg);padding:10px 0;width:100%;max-width:100%;}
+ .chiprow{display:flex;justify-content:flex-end;padding:2px 0 10px;}
+ #chat{display:flex;flex-direction:column;gap:11px;min-height:46vh;max-width:100%;}
+ .sep{align-self:center;color:var(--mut2);font-size:10.5px;letter-spacing:.5px;margin:8px 0 2px;
+   background:rgba(148,163,184,.1);padding:3px 11px;border-radius:20px;}
+ .msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.5;
+   white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;box-shadow:0 4px 14px rgba(2,8,20,.3);}
+ .msg.u{align-self:flex-end;background:var(--grad);color:var(--ink);font-weight:500;border-bottom-right-radius:5px;}
+ .msg.a{align-self:flex-start;background:var(--card-solid);border:1px solid var(--line);border-bottom-left-radius:5px;}
+ .chatform{display:flex;gap:9px;align-items:flex-end;position:sticky;
+   bottom:calc(76px + env(safe-area-inset-bottom));
+   background:linear-gradient(180deg,rgba(11,18,32,0),rgba(11,18,32,.92) 22%);
+   padding:10px 0 6px;width:100%;}
  .chatform textarea{flex:1;min-width:0;width:auto;resize:none;max-height:140px;}
- .chatform .btn{flex:0 0 auto;padding:0 12px;white-space:nowrap;} .chatform{box-sizing:border-box;}
- .dim{color:var(--mut);font-size:12px;line-height:1.5;} canvas{max-height:220px;}
- .seg{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 12px;}
- .seg button{flex:1;min-width:62px;background:var(--card);color:var(--mut);border:0;border-radius:8px;padding:8px 6px;font-size:12px;}
- .seg button.on{background:var(--acc);color:#04293f;font-weight:700;}
- .center{max-width:380px;margin:12vh auto;text-align:center;padding:0 16px;}
+ .chatform .send{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;display:grid;place-items:center;}
+ .chatform .send svg{width:20px;height:20px;}
+
+ /* ---------- bottom nav ---------- */
+ .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:2px;
+   padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);
+   background:rgba(11,18,32,.86);backdrop-filter:saturate(160%) blur(16px);
+   -webkit-backdrop-filter:saturate(160%) blur(16px);border-top:1px solid var(--line);}
+ .tabbar button{flex:1;background:transparent;border:0;color:var(--mut2);
+   display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;
+   font-size:11px;font-weight:600;cursor:pointer;transition:.16s;border-radius:12px;position:relative;}
+ .tabbar button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;}
+ .tabbar button.on{color:var(--acc);}
+ .tabbar button.on::after{content:"";position:absolute;top:0px;width:22px;height:3px;border-radius:3px;background:var(--grad);}
+
+ /* ---------- login ---------- */
+ .center{max-width:380px;margin:14vh auto;text-align:center;padding:0 18px;}
+ .center h1{font-size:26px;font-weight:800;margin:0 0 4px;}
+ .center .in{margin:7px 0;}
 </style></head><body>
 
 <div id="login" class="center hide">
   <h1>&#127947; Garmin Coach</h1>
   <p class="dim">Entre com e-mail e senha.</p>
   <input id="email" class="in" type="email" placeholder="seu@email.com" autocomplete="email">
-  <p></p>
   <input id="senha" class="in" type="password" placeholder="senha (6+ caracteres)" autocomplete="current-password">
   <p></p>
   <button id="entrar" class="btn">Entrar</button>
-  <button id="criar" class="btn" style="background:#334155;color:#e2e8f0;margin-left:6px">Criar senha</button>
+  <button id="criar" class="btn sec" style="margin-left:6px">Criar senha</button>
   <p id="loginMsg" class="dim"></p>
 </div>
 
 <div id="app" class="hide">
-  <header><b>&#127947; Garmin Coach</b><button id="sair" class="btn" style="background:#334155;color:#e2e8f0">Sair</button></header>
-  <div class="tabbar">
-    <button data-t="painel" class="on">Painel</button>
-    <button data-t="treinador">Treinador</button>
-    <button data-t="config">Ajustes</button>
-  </div>
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 13.5l3.2-5.2a1 1 0 0 1 1.7 0l2.6 4.4 2-3a1 1 0 0 1 1.7 0L20 13.5" stroke="#042234" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17.5" r="1.7" fill="#042234"/></svg>
+    </div>
+    <div class="brand"><b>Garmin Coach</b><span>Treinador pessoal</span></div>
+    <div class="spacer"></div>
+    <button id="sair" class="ghost">Sair</button>
+  </header>
 
   <main id="t-painel">
     <div id="coachBox"></div>
+    <h2>Resumo</h2>
     <div id="kpis" class="kpis"></div>
+    <h2>Evolu&ccedil;&atilde;o por per&iacute;odo</h2>
     <div class="seg" id="seg">
       <button data-g="dia">Dia</button>
       <button data-g="sem">Semana</button>
-      <button data-g="mes" class="on">Mes</button>
-      <button data-g="tri">Trimestre</button>
+      <button data-g="mes" class="on">M&ecirc;s</button>
+      <button data-g="tri">Trim.</button>
       <button data-g="ano">Ano</button>
       <button data-g="tudo">Tudo</button>
     </div>
-    <div class="seg" id="navP" style="margin:2px 0 6px">
-      <button id="prevP">&#9664; Anterior</button>
-      <span id="lblP" style="flex:2;text-align:center;align-self:center;font-size:12px;color:var(--txt)"></span>
-      <button id="nextP">Proximo &#9654;</button>
+    <div class="seg" id="navP">
+      <button id="prevP">&#9664;</button>
+      <span id="lblP"></span>
+      <button id="nextP">&#9654;</button>
     </div>
-    <p id="capPeriodo" class="dim" style="margin:0 0 6px"></p>
-    <div class="card" style="overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%"><div id="tabela"></div></div>
-    <h2>Carga</h2><div class="card"><canvas id="cCarga"></canvas></div>
+    <p id="capPeriodo"></p>
+    <div class="card scroll"><div id="tabela"></div></div>
+    <h2>Carga de treino</h2><div class="card"><canvas id="cCarga"></canvas></div>
     <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
     <p id="painelVazio" class="dim"></p>
   </main>
 
   <main id="t-treinador" class="hide">
-    <div style="display:flex;justify-content:flex-end;padding:4px 0 8px"><button id="novaConv" class="btn" style="background:#334155;color:#e2e8f0;font-size:12px;padding:7px 12px">+ Nova conversa</button></div>
+    <div class="chiprow"><button id="novaConv" class="ghost">+ Nova conversa</button></div>
     <div id="chat"></div>
     <div class="chatform">
       <textarea id="q" class="in" rows="1" placeholder="Pergunte ao treinador..."></textarea>
-      <button id="enviar" class="btn">Enviar</button>
+      <button id="enviar" class="btn send" aria-label="Enviar">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12l16-8-6 16-2.5-6.2L4 12z" fill="#042234"/></svg>
+      </button>
     </div>
     <p id="treinoMsg" class="dim"></p>
   </main>
 
   <main id="t-config" class="hide">
-    <h2>Chave da IA (fica so neste aparelho)</h2>
+    <h2>Chave da IA (fica s&oacute; neste aparelho)</h2>
     <div class="card">
       <input id="apikey" class="in" type="password" placeholder="sk-ant-...">
       <p></p><button id="salvarKey" class="btn">Salvar chave</button>
-      <p class="dim">A chave fica no armazenamento deste aparelho (localStorage) e e usada para falar direto com a Claude. Nao vai para o Supabase nem para o GitHub.</p>
+      <p class="dim">A chave fica no armazenamento deste aparelho (localStorage) e &eacute; usada para falar direto com a Claude. N&atilde;o vai para o Supabase nem para o GitHub.</p>
     </div>
     <h2>Seu ID (para configurar o PC)</h2>
     <div class="card"><code id="uid" class="dim"></code>
       <p class="dim">Copie este ID para o arquivo data/supabase.json do PC (campo user_id).</p></div>
-    <h2>Gerar avaliacao agora</h2>
-    <div class="card"><button id="gerarAval" class="btn">Gerar avaliacao da semana</button>
+    <h2>Gerar avalia&ccedil;&atilde;o agora</h2>
+    <div class="card"><button id="gerarAval" class="btn">Gerar avalia&ccedil;&atilde;o da semana</button>
       <p id="avalMsg" class="dim"></p></div>
   </main>
+
+  <nav class="tabbar">
+    <button data-t="painel" class="on">
+      <svg viewBox="0 0 24 24"><path d="M4 13h4v7H4zM10 8h4v12h-4zM16 4h4v16h-4z" stroke-linejoin="round"/></svg>
+      Painel
+    </button>
+    <button data-t="treinador">
+      <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-4 4z" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      Treinador
+    </button>
+    <button data-t="config">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M4.2 7l2.1 1.2M17.7 15.8l2.1 1.2M4.2 17l2.1-1.2M17.7 8.2l2.1-1.2" stroke-linecap="round"/></svg>
+      Ajustes
+    </button>
+  </nav>
 </div>
 
+<script>if(window.Chart){Chart.defaults.color="#90a4bd";Chart.defaults.borderColor="rgba(148,163,184,.14)";Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif";Chart.defaults.font.size=11;}</script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body></html>
