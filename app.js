@@ -17,10 +17,11 @@ let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
 
 function _bucketsJS(gran){
   const kf=keyFnG(gran), m=new Map();
-  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],hrv:[],fcmax:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
+  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],hrv:[],fcmax:[],passos:[],cal:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
   for(const r of (ANALISE.daily||[])){const b=E(kf(r.d)); b.carga+=r.carga||0;
     if(r.sono!=null)b.sono.push(r.sono); if(r.sono_score!=null)b.sscore.push(r.sono_score); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);
-    if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa); if(r.hrv!=null)b.hrv.push(r.hrv);}
+    if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa); if(r.hrv!=null)b.hrv.push(r.hrv);
+    if(r.passos!=null)b.passos.push(r.passos); if(r.cal!=null)b.cal.push(r.cal);}
   for(const x of (ANALISE.ativs||[])){const b=E(kf(x.d));
     if(x.hrmax)b.fcmax.push(x.hrmax);
     if(x.cat==="ciclismo"){b.cic_h+=x.h;b.cic_n++;b.km+=x.km||0;} else if(x.cat==="forca"){b.for_h+=x.h;b.for_n++;}}
@@ -115,6 +116,14 @@ function rotuloG(k,g){
 /* ---------- render painel ---------- */
 let charts=[];
 function destroyCharts(){charts.forEach(c=>c.destroy());charts=[];}
+function temAlgum(arr){return arr.some(v=>v!=null && !(typeof v==="number"&&isNaN(v)));}
+function addChartCard(container,titulo,cfg){
+  const h=document.createElement("h2"); h.textContent=titulo;
+  const card=document.createElement("div"); card.className="card";
+  const cv=document.createElement("canvas"); card.appendChild(cv);
+  container.append(h,card);
+  charts.push(new Chart(cv,cfg));
+}
 function renderPainel(){
   if(!ANALISE){ $("painelVazio").textContent="Ainda nao recebi seus dados. Rode o app no PC (rodar.bat) para enviar."; return; }
   $("painelVazio").textContent="";
@@ -175,6 +184,28 @@ function renderPainel(){
     {label:"FC repouso",data:B.map(b=>avgN(b.fcrep)),borderColor:"#fb923c",backgroundColor:"#fb923c",spanGaps:true,tension:.3},
     {label:"FC máx (treinos)",data:B.map(b=>maxN(b.fcmax)),borderColor:"#ef4444",backgroundColor:"#ef4444",spanGaps:true,tension:.3}]},
     options:{plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:"bpm"}}}}}));
+  // ---- graficos extras (escondem-se quando nao ha dado no periodo) ----
+  const mc=$("maisCharts");
+  if(mc){ mc.replaceChildren();
+    const cicH=B.map(b=>+b.cic_h.toFixed(1)), forH=B.map(b=>+b.for_h.toFixed(1));
+    if(cicH.some(v=>v>0)||forH.some(v=>v>0)) addChartCard(mc,"Volume de treino (h)",{type:"bar",data:{labels:lab,datasets:[
+      {label:"Ciclismo",data:cicH,backgroundColor:"#38bdf8"},
+      {label:"Forca",data:forH,backgroundColor:"#a855f7"}]},options:{plugins:{legend:{display:true}},scales:{x:{stacked:true},y:{stacked:true}}}});
+    const km=B.map(b=>Math.round(b.km));
+    if(km.some(v=>v>0)) addChartCard(mc,"Distancia pedalada (km)",{type:"bar",data:{labels:lab,datasets:[{data:km,backgroundColor:"#0ea5e9"}]},options:{plugins:{legend:{display:false}}}});
+    const vo2=B.map(b=>b.vo2);
+    if(temAlgum(vo2)) addChartCard(mc,"VO2max",{type:"line",data:{labels:lab,datasets:[{label:"VO2max",data:vo2,borderColor:"#22d3ee",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    const bba=B.map(b=>avgN(b.bba)), bbb=B.map(b=>avgN(b.bbb));
+    if(temAlgum(bba)||temAlgum(bbb)) addChartCard(mc,"Body Battery (pico e vale)",{type:"line",data:{labels:lab,datasets:[
+      {label:"Pico",data:bba,borderColor:"#22c55e",spanGaps:true,tension:.3},
+      {label:"Vale",data:bbb,borderColor:"#ef4444",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:true}}}});
+    const hrv=B.map(b=>avgN(b.hrv));
+    if(temAlgum(hrv)) addChartCard(mc,"HRV noturna (ms)",{type:"line",data:{labels:lab,datasets:[{label:"HRV",data:hrv,borderColor:"#818cf8",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    const passos=B.map(b=>avgN(b.passos));
+    if(temAlgum(passos)) addChartCard(mc,"Passos/dia (media)",{type:"line",data:{labels:lab,datasets:[{label:"Passos",data:passos,borderColor:"#34d399",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    const cal=B.map(b=>avgN(b.cal));
+    if(temAlgum(cal)) addChartCard(mc,"Calorias ativas/dia (media)",{type:"line",data:{labels:lab,datasets:[{label:"Cal",data:cal,borderColor:"#fbbf24",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+  }
 }
 
 async function renderCoach(){
@@ -235,7 +266,7 @@ async function enviarChat(texto){
 
 /* ---------- navegacao/sessao ---------- */
 function showTab(t){
-  ["painel","treinador","config"].forEach(x=>$("t-"+x).classList.toggle("hide",x!==t));
+  ["painel","avaliacao","treinador","config"].forEach(x=>{const el=$("t-"+x); if(el) el.classList.toggle("hide",x!==t);});
   document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
 }
 async function carregarTudo(){
@@ -275,7 +306,9 @@ document.querySelector(".tabbar").onclick=e=>{const t=e.target.dataset.t;if(t)sh
 $("enviar").onclick=()=>{const t=$("q").value.trim();if(!t)return;$("q").value="";enviarChat(t);};
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();$("enviar").click();}});
 $("salvarKey").onclick=()=>{localStorage.setItem(KEYLS,$("apikey").value.trim());$("apikey").type="password";alert("Chave salva neste aparelho.");renderCoach();};
-$("gerarAval").onclick=async()=>{ $("avalMsg").textContent="Gerando..."; try{await gerarAvaliacao();await renderCoach();showTab("painel");$("avalMsg").textContent="Pronto!";}catch(e){$("avalMsg").textContent="Erro: "+e.message;} };
+async function rodarAval(msgId){ const m=$(msgId); if(m)m.textContent="Gerando avaliacao... (pode levar ~1 min)"; try{ await gerarAvaliacao(); await renderCoach(); showTab("avaliacao"); if(m)m.textContent="Pronto!"; }catch(e){ if(m)m.textContent="Erro: "+e.message; } }
+$("gerarAval").onclick=()=>rodarAval("avalMsg");
+const ga2=$("gerarAval2"); if(ga2) ga2.onclick=()=>rodarAval("avalMsg2");
 
 const nc=document.getElementById("novaConv"); if(nc) nc.addEventListener("click",()=>{localStorage.setItem(KEYSINCE,new Date().toISOString());const hd=$("histData");if(hd)hd.value="";$("chat").replaceChildren();addMsg("assistant","Nova conversa iniciada. Sobre o que vamos falar?");});
 const hdEl=document.getElementById("histData"); if(hdEl) hdEl.addEventListener("change",()=>carregarConversa(hdEl.value||null));

@@ -168,7 +168,6 @@
   </header>
 
   <main id="t-painel">
-    <div id="coachBox"></div>
     <h2>Resumo</h2>
     <div id="kpis" class="kpis"></div>
     <h2>Evolu&ccedil;&atilde;o por per&iacute;odo</h2>
@@ -190,7 +189,17 @@
     <h2>Carga de treino</h2><div class="card"><canvas id="cCarga"></canvas></div>
     <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
     <h2>Frequ&ecirc;ncia card&iacute;aca</h2><div class="card"><canvas id="cFC"></canvas></div>
+    <div id="maisCharts"></div>
     <p id="painelVazio" class="dim"></p>
+  </main>
+
+  <main id="t-avaliacao" class="hide">
+    <div class="chiprow" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:6px 4px 0">Avalia&ccedil;&atilde;o da semana</h2>
+      <button id="gerarAval2" class="ghost">Atualizar</button>
+    </div>
+    <div id="coachBox"></div>
+    <p id="avalMsg2" class="dim"></p>
   </main>
 
   <main id="t-treinador" class="hide">
@@ -227,6 +236,10 @@
     <button data-t="painel" class="on">
       <svg viewBox="0 0 24 24"><path d="M4 13h4v7H4zM10 8h4v12h-4zM16 4h4v16h-4z" stroke-linejoin="round"/></svg>
       Painel
+    </button>
+    <button data-t="avaliacao">
+      <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6V6H9z" stroke-linejoin="round"/><path d="M8.5 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Avalia&ccedil;&atilde;o
     </button>
     <button data-t="treinador">
       <svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-4 4z" stroke-linejoin="round" stroke-linecap="round"/></svg>
