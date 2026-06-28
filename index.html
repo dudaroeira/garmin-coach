@@ -189,11 +189,15 @@
     <div class="card scroll"><div id="tabela"></div></div>
     <h2>Carga de treino</h2><div class="card"><canvas id="cCarga"></canvas></div>
     <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
+    <h2>Frequ&ecirc;ncia card&iacute;aca</h2><div class="card"><canvas id="cFC"></canvas></div>
     <p id="painelVazio" class="dim"></p>
   </main>
 
   <main id="t-treinador" class="hide">
-    <div class="chiprow"><button id="novaConv" class="ghost">+ Nova conversa</button></div>
+    <div class="chiprow" style="gap:8px;align-items:center;justify-content:space-between">
+      <select id="histData" class="in" style="flex:1;padding:9px 11px;font-size:13px"></select>
+      <button id="novaConv" class="ghost">+ Nova</button>
+    </div>
     <div id="chat"></div>
     <div class="chatform">
       <textarea id="q" class="in" rows="1" placeholder="Pergunte ao treinador..."></textarea>

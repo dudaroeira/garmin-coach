@@ -17,16 +17,18 @@ let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
 
 function _bucketsJS(gran){
   const kf=keyFnG(gran), m=new Map();
-  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],hrv:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
+  const E=k=>{ if(!m.has(k)) m.set(k,{k,carga:0,sono:[],sscore:[],stress:[],fcrep:[],bba:[],bbb:[],hrv:[],fcmax:[],cic_h:0,for_h:0,cic_n:0,for_n:0,km:0,vo2:null}); return m.get(k); };
   for(const r of (ANALISE.daily||[])){const b=E(kf(r.d)); b.carga+=r.carga||0;
     if(r.sono!=null)b.sono.push(r.sono); if(r.sono_score!=null)b.sscore.push(r.sono_score); if(r.stress!=null)b.stress.push(r.stress); if(r.fcrep!=null)b.fcrep.push(r.fcrep);
     if(r.bb_alta!=null)b.bba.push(r.bb_alta); if(r.bb_baixa!=null)b.bbb.push(r.bb_baixa); if(r.hrv!=null)b.hrv.push(r.hrv);}
   for(const x of (ANALISE.ativs||[])){const b=E(kf(x.d));
+    if(x.hrmax)b.fcmax.push(x.hrmax);
     if(x.cat==="ciclismo"){b.cic_h+=x.h;b.cic_n++;b.km+=x.km||0;} else if(x.cat==="forca"){b.for_h+=x.h;b.for_n++;}}
   for(const v of (ANALISE.vo2_xy||[])){const k=kf(v.d); if(m.has(k))m.get(k).vo2=v.v;}
   return [...m.keys()].sort().map(k=>m.get(k));
 }
 const avgN=arr=>arr.length?Math.round(arr.reduce((x,y)=>x+y,0)/arr.length*10)/10:null;
+const maxN=arr=>arr.length?Math.max.apply(null,arr):null;
 
 function digest(a){
   if(!a) return "Sem dados ainda.";
@@ -168,6 +170,11 @@ function renderPainel(){
     {label:"Sono (h)",data:B.map(b=>avgN(b.sono)),borderColor:"#818cf8",spanGaps:true},
     {label:"Stress",data:B.map(b=>avgN(b.stress)),borderColor:"#fb7185",yAxisID:"y2",spanGaps:true}]},
     options:{scales:{y2:{position:"right",grid:{drawOnChartArea:false}}}}}));
+  const cfc=$("cFC");
+  if(cfc) charts.push(new Chart(cfc,{type:"line",data:{labels:lab,datasets:[
+    {label:"FC repouso",data:B.map(b=>avgN(b.fcrep)),borderColor:"#fb923c",backgroundColor:"#fb923c",spanGaps:true,tension:.3},
+    {label:"FC máx (treinos)",data:B.map(b=>maxN(b.fcmax)),borderColor:"#ef4444",backgroundColor:"#ef4444",spanGaps:true,tension:.3}]},
+    options:{plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:"bpm"}}}}}));
 }
 
 async function renderCoach(){
@@ -183,15 +190,35 @@ async function renderCoach(){
 /* ---------- chat ---------- */
 function addMsg(role,txt){const d=document.createElement("div");d.className="msg "+(role==="user"?"u":"a");d.textContent=txt;$("chat").appendChild(d);$("chat").scrollTop=$("chat").scrollHeight;return d;}
 function addSep(diaISO){const p=diaISO.split("-");const d=document.createElement("div");d.className="sep";d.textContent=p[2]+"/"+p[1]+"/"+p[0];$("chat").appendChild(d);}
-async function carregarConversa(){
-  let q=sb.from("conversations").select("role,content,criado_em").eq("user_id",UID).order("criado_em",{ascending:true}).limit(80);
-  const since=sinceVal(); if(since) q=q.gte("criado_em",since);
-  const {data}=await q;
-  $("chat").replaceChildren(); let lastDay="";
-  (data||[]).forEach(m=>{ const day=(m.criado_em||"").slice(0,10); if(day&&day!==lastDay){addSep(day);lastDay=day;} addMsg(m.role,m.content); });
-  if(!data||!data.length) addMsg("assistant","Opa! Sou seu treinador. Pergunte sobre sua semana, recuperacao ou o que treinar. Eu lembro do seu historico.");
+const SAUDACAO="Opa! Sou seu treinador. Pergunte sobre sua semana, recuperacao ou o que treinar. Eu lembro do seu historico.";
+async function carregarDatas(){
+  const sel=$("histData"); if(!sel) return;
+  const {data}=await sb.from("conversations").select("criado_em").eq("user_id",UID).order("criado_em",{ascending:false}).limit(500);
+  const dias=[...new Set((data||[]).map(m=>(m.criado_em||"").slice(0,10)).filter(Boolean))];
+  sel.replaceChildren();
+  const o0=document.createElement("option"); o0.value=""; o0.textContent="Ultima interacao"; sel.appendChild(o0);
+  dias.forEach(d=>{ const p=d.split("-"); const o=document.createElement("option"); o.value=d; o.textContent="Historico · "+p[2]+"/"+p[1]+"/"+p[0]; sel.appendChild(o); });
+}
+async function carregarConversa(dia){
+  const chat=$("chat"); chat.replaceChildren();
+  if(dia){  // historico de um dia especifico
+    const {data}=await sb.from("conversations").select("role,content,criado_em").eq("user_id",UID)
+      .gte("criado_em",dia+"T00:00:00").lte("criado_em",dia+"T23:59:59.999")
+      .order("criado_em",{ascending:true}).limit(300);
+    addSep(dia);
+    (data||[]).forEach(m=>addMsg(m.role,m.content));
+    if(!data||!data.length) addMsg("assistant","(sem mensagens nesta data)");
+    return;
+  }
+  // padrao: apenas a ultima interacao (ultimas 2 mensagens)
+  const {data}=await sb.from("conversations").select("role,content").eq("user_id",UID)
+    .order("criado_em",{ascending:false}).limit(2);
+  const ult=(data||[]).reverse();
+  if(!ult.length){ addMsg("assistant",SAUDACAO); return; }
+  ult.forEach(m=>addMsg(m.role,m.content));
 }
 async function enviarChat(texto){
+  const hd=$("histData"); if(hd && hd.value){ hd.value=""; $("chat").replaceChildren(); }
   addMsg("user",texto); const pend=addMsg("assistant","...");
   try{
     let cq=sb.from("conversations").select("role,content").eq("user_id",UID).order("criado_em",{ascending:true}).limit(20);
@@ -202,6 +229,7 @@ async function enviarChat(texto){
     const resp=await callClaude(contexto(hist),msgs,1200);
     pend.textContent=resp;
     await sb.from("conversations").insert([{user_id:UID,role:"user",content:texto},{user_id:UID,role:"assistant",content:resp}]);
+    carregarDatas();
   }catch(e){ pend.textContent="Erro: "+e.message; }
 }
 
@@ -213,7 +241,7 @@ function showTab(t){
 async function carregarTudo(){
   const {data:snap}=await sb.from("snapshots").select("dados,atualizado_em").eq("user_id",UID).maybeSingle();
   ANALISE=snap?.dados||null; SNAP_AT=snap?.atualizado_em||null;
-  renderPainel(); await renderCoach(); await carregarConversa();
+  renderPainel(); await renderCoach(); await carregarDatas(); await carregarConversa();
 }
 async function entrar(session){
   UID=session.user.id; $("uid").textContent=UID;
@@ -249,7 +277,8 @@ $("q").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.prevent
 $("salvarKey").onclick=()=>{localStorage.setItem(KEYLS,$("apikey").value.trim());$("apikey").type="password";alert("Chave salva neste aparelho.");renderCoach();};
 $("gerarAval").onclick=async()=>{ $("avalMsg").textContent="Gerando..."; try{await gerarAvaliacao();await renderCoach();showTab("painel");$("avalMsg").textContent="Pronto!";}catch(e){$("avalMsg").textContent="Erro: "+e.message;} };
 
-const nc=document.getElementById("novaConv"); if(nc) nc.addEventListener("click",()=>{localStorage.setItem(KEYSINCE,new Date().toISOString());carregarConversa();});
+const nc=document.getElementById("novaConv"); if(nc) nc.addEventListener("click",()=>{localStorage.setItem(KEYSINCE,new Date().toISOString());const hd=$("histData");if(hd)hd.value="";$("chat").replaceChildren();addMsg("assistant","Nova conversa iniciada. Sobre o que vamos falar?");});
+const hdEl=document.getElementById("histData"); if(hdEl) hdEl.addEventListener("change",()=>carregarConversa(hdEl.value||null));
 document.getElementById("prevP").addEventListener("click",()=>{OFFP++;renderPainel();});
 document.getElementById("nextP").addEventListener("click",()=>{OFFP--;renderPainel();});
 document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dataset.g;if(!g)return;GRANP=g;OFFP=0;[...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on",x.dataset.g===g));renderPainel();});
