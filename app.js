@@ -221,7 +221,7 @@ function renderPainel(){
     charts.push(new Chart(cfc,{type:"line",data:{labels:lab,datasets:[
       {label:"FC repouso",data:B.map(b=>avgN(b.fcrep)),borderColor:ACC,backgroundColor:grad,borderWidth:2.6,fill:true,tension:.4,pointRadius:0,spanGaps:true},
       {label:"FC máx",data:B.map(b=>maxN(b.fcmax)),borderColor:AMBER,backgroundColor:"transparent",borderWidth:2,borderDash:[4,4],tension:.4,pointRadius:0,spanGaps:true}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:legPt,scales:{x:noX,y:softY}}}}));
+      options:{responsive:true,maintainAspectRatio:false,plugins:legPt,scales:{x:noX,y:softY}}}));
   }
   // ---- graficos extras (escondem-se quando nao ha dado no periodo) ----
   const GREEN="#34d399", PURPLE="#7c5cff", CYAN="#00b8d4", PINK="#ff2d55";
