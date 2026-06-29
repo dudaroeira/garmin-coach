@@ -118,26 +118,58 @@ let charts=[];
 function destroyCharts(){charts.forEach(c=>c.destroy());charts=[];}
 function temAlgum(arr){return arr.some(v=>v!=null && !(typeof v==="number"&&isNaN(v)));}
 function addChartCard(container,titulo,cfg){
-  const h=document.createElement("h2"); h.textContent=titulo;
+  const lbl=document.createElement("div"); lbl.className="seclbl";
+  const s=document.createElement("span"); s.textContent=titulo; lbl.appendChild(s);
   const card=document.createElement("div"); card.className="card";
-  const cv=document.createElement("canvas"); card.appendChild(cv);
-  container.append(h,card);
+  const box=document.createElement("div"); box.className="chartbox";
+  const cv=document.createElement("canvas"); box.appendChild(cv); card.appendChild(box);
+  container.append(lbl,card);
+  cfg.options=cfg.options||{}; cfg.options.responsive=true; cfg.options.maintainAspectRatio=false;
   charts.push(new Chart(cv,cfg));
+}
+function atualizarProntidao(){
+  const hero=$("heroProntidao"); if(!hero) return;
+  const d=(ANALISE&&ANALISE.daily)||[];
+  const ss=[...d].reverse().find(r=>r.sono_score!=null);
+  if(!ss){ hero.classList.add("hide"); return; }
+  let score=ss.sono_score;
+  const acwr=ANALISE.resumo&&ANALISE.resumo.acwr_atual;
+  if(acwr!=null){ if(acwr>1.4) score-=12; else if(acwr<0.8) score+=4; }
+  score=Math.round(Math.max(0,Math.min(100,score)));
+  let nota,desc;
+  if(score>=80){ nota="Pronto para intensidade"; desc="Boa recuperação — dia para um treino de qualidade."; }
+  else if(score>=60){ nota="Treino moderado"; desc="Recuperação razoável; mantenha a intensidade controlada."; }
+  else { nota="Priorize recuperação"; desc="Sinais de fadiga; prefira volume leve ou descanso."; }
+  if(acwr!=null && acwr>1.4) desc="Carga aguda alta (ACWR "+Number(acwr).toFixed(2)+") — cuidado com a intensidade.";
+  $("ringVal").textContent=score;
+  const fill=$("ringFill"); if(fill) fill.setAttribute("stroke-dasharray", score+" 100");
+  $("readyLabel").textContent=nota;
+  $("readyDesc").textContent=desc+" (base: sleep score "+ss.sono_score+" de "+ss.d.slice(8,10)+"/"+ss.d.slice(5,7)+")";
+  hero.classList.remove("hide");
 }
 function renderPainel(){
   if(!ANALISE){ $("painelVazio").textContent="Ainda nao recebi seus dados. Rode o app no PC (rodar.bat) para enviar."; return; }
   $("painelVazio").textContent="";
   const r=ANALISE.resumo||{}, sd=ANALISE.saude||{};
-  const kp=[["Atividades",r.n_atividades],["Pedais",r.n_ciclismo],["Forca",r.n_forca],
-    ["ACWR",r.acwr_atual!=null?Number(r.acwr_atual).toFixed(2):"--"],
-    ["Sono 30d",sd.media_sono_30d!=null?sd.media_sono_30d+"h":"--"],["Stress 30d",sd.media_stress_30d??"--"]];
+  const kp=[
+    {l:"Atividades",v:r.n_atividades,u:"",sub:"último ano"},
+    {l:"Pedais",v:r.n_ciclismo,u:"",sub:"ciclismo"},
+    {l:"Força",v:r.n_forca,u:"",sub:"sessões"},
+    {l:"ACWR",v:r.acwr_atual!=null?Number(r.acwr_atual).toFixed(2):"--",u:"",sub:"carga aguda/crônica"},
+    {l:"Sono",v:sd.media_sono_30d??"--",u:sd.media_sono_30d!=null?"h":"",sub:"média 30 dias"},
+    {l:"Stress",v:sd.media_stress_30d??"--",u:"",sub:"média 30 dias"}];
   const kpiBox=$("kpis"); kpiBox.replaceChildren();
-  for(const [l,v] of kp){
+  for(const k of kp){
     const c=document.createElement("div"); c.className="kpi";
-    const dv=document.createElement("div"); dv.className="v"; dv.textContent=(v??"--");
-    const dl=document.createElement("div"); dl.className="l"; dl.textContent=l;
-    c.append(dv,dl); kpiBox.appendChild(c);
+    const l=document.createElement("div"); l.className="kpi-l"; l.textContent=k.l;
+    const row=document.createElement("div"); row.className="kpi-row";
+    const v=document.createElement("span"); v.className="kpi-v"; v.textContent=(k.v??"--");
+    const u=document.createElement("span"); u.className="kpi-u"; u.textContent=k.u||"";
+    row.append(v,u);
+    const sub=document.createElement("div"); sub.className="kpi-sub"; sub.textContent=k.sub||"";
+    c.append(l,row,sub); kpiBox.appendChild(c);
   }
+  atualizarProntidao();
 
   const Ball=_bucketsJS(GRANP);
   const LIM={dia:7,sem:5,mes:12,tri:8,ano:99,tudo:9999};
@@ -174,37 +206,46 @@ function renderPainel(){
   });
   $("tabela").replaceChildren(tbl);
   destroyCharts();
-  charts.push(new Chart($("cCarga"),{type:"bar",data:{labels:lab,datasets:[{data:B.map(b=>Math.round(b.carga)),backgroundColor:"#38bdf8"}]},options:{plugins:{legend:{display:false}}}}));
+  const ACC="#ff5e3a", AMBER="#e9c46a";
+  const noX={grid:{display:false},border:{display:false},ticks:{display:false}};
+  const softY={grid:{color:"rgba(255,255,255,.05)"},border:{display:false},ticks:{maxTicksLimit:4}};
+  const legPt={legend:{display:true,labels:{boxWidth:8,boxHeight:8,usePointStyle:true,padding:14}}};
+  charts.push(new Chart($("cCarga"),{type:"bar",data:{labels:lab,datasets:[{data:B.map(b=>Math.round(b.carga)),backgroundColor:ACC,borderRadius:6,borderSkipped:false,maxBarThickness:22}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{displayColors:false}},scales:{x:noX,y:{...softY,beginAtZero:true}}}}));
   charts.push(new Chart($("cSaude"),{type:"line",data:{labels:lab,datasets:[
-    {label:"Sono (h)",data:B.map(b=>avgN(b.sono)),borderColor:"#818cf8",spanGaps:true},
-    {label:"Stress",data:B.map(b=>avgN(b.stress)),borderColor:"#fb7185",yAxisID:"y2",spanGaps:true}]},
-    options:{scales:{y2:{position:"right",grid:{drawOnChartArea:false}}}}}));
+    {label:"Sono (h)",data:B.map(b=>avgN(b.sono)),borderColor:ACC,backgroundColor:"transparent",borderWidth:2.6,tension:.4,pointRadius:0,spanGaps:true,yAxisID:"y"},
+    {label:"Stress",data:B.map(b=>avgN(b.stress)),borderColor:AMBER,backgroundColor:"transparent",borderWidth:2,borderDash:[4,4],tension:.4,pointRadius:0,spanGaps:true,yAxisID:"y1"}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:legPt,scales:{x:noX,y:softY,y1:{position:"right",min:0,max:100,grid:{display:false},border:{display:false},ticks:{maxTicksLimit:4}}}}}));
   const cfc=$("cFC");
-  if(cfc) charts.push(new Chart(cfc,{type:"line",data:{labels:lab,datasets:[
-    {label:"FC repouso",data:B.map(b=>avgN(b.fcrep)),borderColor:"#fb923c",backgroundColor:"#fb923c",spanGaps:true,tension:.3},
-    {label:"FC máx (treinos)",data:B.map(b=>maxN(b.fcmax)),borderColor:"#ef4444",backgroundColor:"#ef4444",spanGaps:true,tension:.3}]},
-    options:{plugins:{legend:{display:true}},scales:{y:{title:{display:true,text:"bpm"}}}}}));
+  if(cfc){ const ctx=cfc.getContext("2d"); const grad=ctx.createLinearGradient(0,0,0,178); grad.addColorStop(0,"rgba(255,94,58,.34)"); grad.addColorStop(1,"rgba(255,94,58,0)");
+    charts.push(new Chart(cfc,{type:"line",data:{labels:lab,datasets:[
+      {label:"FC repouso",data:B.map(b=>avgN(b.fcrep)),borderColor:ACC,backgroundColor:grad,borderWidth:2.6,fill:true,tension:.4,pointRadius:0,spanGaps:true},
+      {label:"FC máx",data:B.map(b=>maxN(b.fcmax)),borderColor:AMBER,backgroundColor:"transparent",borderWidth:2,borderDash:[4,4],tension:.4,pointRadius:0,spanGaps:true}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:legPt,scales:{x:noX,y:softY}}}}));
+  }
   // ---- graficos extras (escondem-se quando nao ha dado no periodo) ----
+  const GREEN="#34d399", PURPLE="#7c5cff", CYAN="#00b8d4", PINK="#ff2d55";
+  const ln=(cor)=>({borderColor:cor,backgroundColor:"transparent",borderWidth:2.4,tension:.4,pointRadius:0,spanGaps:true});
   const mc=$("maisCharts");
   if(mc){ mc.replaceChildren();
     const cicH=B.map(b=>+b.cic_h.toFixed(1)), forH=B.map(b=>+b.for_h.toFixed(1));
     if(cicH.some(v=>v>0)||forH.some(v=>v>0)) addChartCard(mc,"Volume de treino (h)",{type:"bar",data:{labels:lab,datasets:[
-      {label:"Ciclismo",data:cicH,backgroundColor:"#38bdf8"},
-      {label:"Forca",data:forH,backgroundColor:"#a855f7"}]},options:{plugins:{legend:{display:true}},scales:{x:{stacked:true},y:{stacked:true}}}});
+      {label:"Ciclismo",data:cicH,backgroundColor:ACC,borderRadius:5,borderSkipped:false,maxBarThickness:22},
+      {label:"Força",data:forH,backgroundColor:AMBER,borderRadius:5,borderSkipped:false,maxBarThickness:22}]},options:{plugins:legPt,scales:{x:{...noX,stacked:true},y:{...softY,stacked:true,beginAtZero:true}}}});
     const km=B.map(b=>Math.round(b.km));
-    if(km.some(v=>v>0)) addChartCard(mc,"Distancia pedalada (km)",{type:"bar",data:{labels:lab,datasets:[{data:km,backgroundColor:"#0ea5e9"}]},options:{plugins:{legend:{display:false}}}});
+    if(km.some(v=>v>0)) addChartCard(mc,"Distância pedalada (km)",{type:"bar",data:{labels:lab,datasets:[{data:km,backgroundColor:ACC,borderRadius:6,borderSkipped:false,maxBarThickness:22}]},options:{plugins:{legend:{display:false}},scales:{x:noX,y:{...softY,beginAtZero:true}}}});
     const vo2=B.map(b=>b.vo2);
-    if(temAlgum(vo2)) addChartCard(mc,"VO2max",{type:"line",data:{labels:lab,datasets:[{label:"VO2max",data:vo2,borderColor:"#22d3ee",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    if(temAlgum(vo2)) addChartCard(mc,"VO2max",{type:"line",data:{labels:lab,datasets:[Object.assign({label:"VO2max",data:vo2},ln(CYAN))]},options:{plugins:{legend:{display:false}},scales:{x:noX,y:softY}}});
     const bba=B.map(b=>avgN(b.bba)), bbb=B.map(b=>avgN(b.bbb));
     if(temAlgum(bba)||temAlgum(bbb)) addChartCard(mc,"Body Battery (pico e vale)",{type:"line",data:{labels:lab,datasets:[
-      {label:"Pico",data:bba,borderColor:"#22c55e",spanGaps:true,tension:.3},
-      {label:"Vale",data:bbb,borderColor:"#ef4444",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:true}}}});
+      Object.assign({label:"Pico",data:bba},ln(GREEN)),
+      Object.assign({label:"Vale",data:bbb},ln(PINK))]},options:{plugins:legPt,scales:{x:noX,y:softY}}});
     const hrv=B.map(b=>avgN(b.hrv));
-    if(temAlgum(hrv)) addChartCard(mc,"HRV noturna (ms)",{type:"line",data:{labels:lab,datasets:[{label:"HRV",data:hrv,borderColor:"#818cf8",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    if(temAlgum(hrv)) addChartCard(mc,"HRV noturna (ms)",{type:"line",data:{labels:lab,datasets:[Object.assign({label:"HRV",data:hrv},ln(PURPLE))]},options:{plugins:{legend:{display:false}},scales:{x:noX,y:softY}}});
     const passos=B.map(b=>avgN(b.passos));
-    if(temAlgum(passos)) addChartCard(mc,"Passos/dia (media)",{type:"line",data:{labels:lab,datasets:[{label:"Passos",data:passos,borderColor:"#34d399",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    if(temAlgum(passos)) addChartCard(mc,"Passos/dia (média)",{type:"line",data:{labels:lab,datasets:[Object.assign({label:"Passos",data:passos},ln(GREEN))]},options:{plugins:{legend:{display:false}},scales:{x:noX,y:softY}}});
     const cal=B.map(b=>avgN(b.cal));
-    if(temAlgum(cal)) addChartCard(mc,"Calorias ativas/dia (media)",{type:"line",data:{labels:lab,datasets:[{label:"Cal",data:cal,borderColor:"#fbbf24",spanGaps:true,tension:.3}]},options:{plugins:{legend:{display:false}}}});
+    if(temAlgum(cal)) addChartCard(mc,"Calorias ativas/dia (média)",{type:"line",data:{labels:lab,datasets:[Object.assign({label:"Cal",data:cal},ln(AMBER))]},options:{plugins:{legend:{display:false}},scales:{x:noX,y:softY}}});
   }
 }
 

@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="pt-BR"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" content="#0b0c0e">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Garmin Coach</title>
@@ -8,229 +8,249 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
  :root{
-   --bg:#0b1220; --bg-soft:#0f172a;
-   --card:rgba(22,32,52,.72); --card-solid:#161f33; --line:rgba(148,163,184,.14);
-   --txt:#eaf1f9; --mut:#90a4bd; --mut2:#6b7f98;
-   --acc:#22d3ee; --acc2:#3b82f6; --ink:#042234;
-   --grad:linear-gradient(135deg,#22d3ee 0%,#3b82f6 100%);
-   --shadow:0 10px 30px rgba(2,8,20,.45);
-   --r:18px;
+   --acc:#ff5e3a; --ink:#1a0e09; --bg:#0b0c0e; --bg2:#070809;
+   --card:#15171a; --card2:#0e0f11; --seg:#121315;
+   --txt:#f4f1ee; --txt2:#dcd9d4; --mut:#9a9590; --mut2:#7c7975; --mut3:#6b6864;
+   --line:rgba(255,255,255,.06); --line2:rgba(255,255,255,.08); --accline:rgba(255,94,58,.22);
  }
  *{box-sizing:border-box;min-width:0;}
- html,body{overflow-x:hidden;max-width:100%;}
- body{
-   margin:0;width:100%;color:var(--txt);
-   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-   -webkit-font-smoothing:antialiased;letter-spacing:.1px;
-   background:
-     radial-gradient(1100px 560px at 50% -12%, #1a3056 0%, rgba(15,23,42,0) 60%),
-     radial-gradient(900px 500px at 100% 0%, #15294a 0%, rgba(15,23,42,0) 55%),
-     var(--bg);
-   background-attachment:fixed;
-   padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);
- }
- canvas{max-width:100%!important;max-height:230px;} img,svg,table{max-width:100%;}
+ ::-webkit-scrollbar{width:0;height:0;} *{scrollbar-width:none;}
+ html,body{margin:0;height:100%;background:var(--bg2);}
+ body{color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.1px;}
+ input,textarea,button,select{font-family:inherit;}
+ input::placeholder,textarea::placeholder{color:var(--mut3);}
+ canvas{max-width:100%!important;}
  .hide{display:none!important;}
-
- /* ---------- header ---------- */
- header{
-   position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:11px;
-   padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
-   background:rgba(11,18,32,.72);backdrop-filter:saturate(160%) blur(14px);
-   -webkit-backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--line);
- }
- .logo{width:34px;height:34px;border-radius:11px;flex:0 0 auto;display:grid;place-items:center;
-   background:var(--grad);box-shadow:0 6px 16px rgba(34,211,238,.35);}
- .logo svg{width:20px;height:20px;display:block;}
- .brand{display:flex;flex-direction:column;line-height:1.05;}
- .brand b{font-size:16px;font-weight:800;letter-spacing:.2px;}
- .brand span{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;}
- header .spacer{flex:1;}
- .ghost{background:rgba(148,163,184,.12);color:var(--txt);border:1px solid var(--line);
-   border-radius:11px;padding:9px 13px;font-size:13px;font-weight:600;}
-
- /* ---------- layout ---------- */
- main{padding:16px 13px 110px;max-width:760px;margin:0 auto;width:100%;}
- h2{font-size:11.5px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mut);
-   margin:22px 4px 9px;display:flex;align-items:center;gap:8px;font-weight:700;}
- h2::before{content:"";width:14px;height:2.5px;border-radius:2px;background:var(--grad);}
-
- .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
-   padding:16px;margin-bottom:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-   box-shadow:var(--shadow);}
-
- /* ---------- KPIs ---------- */
- .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(98px,1fr));gap:10px;margin-bottom:6px;}
- .kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);
-   border-radius:15px;padding:13px 13px 12px;box-shadow:var(--shadow);}
- .kpi::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--grad);opacity:.9;}
- .kpi .v{font-size:23px;font-weight:800;letter-spacing:.3px;line-height:1.1;}
- .kpi .l{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin-top:3px;font-weight:600;}
-
- /* ---------- coach ---------- */
- .coach{position:relative;background:
-     linear-gradient(150deg, rgba(34,211,238,.10), rgba(59,130,246,.06) 45%, rgba(22,32,52,.6)),
-     var(--card-solid);
-   border:1px solid rgba(59,130,246,.32);border-radius:var(--r);padding:17px 16px 16px;
-   white-space:pre-wrap;line-height:1.62;font-size:14px;box-shadow:var(--shadow);overflow:hidden;}
- .coach::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--grad);}
- .coach.dim{color:var(--mut);font-size:13px;white-space:normal;border-style:dashed;}
-
- /* ---------- segmented (periodo) ---------- */
- .seg{display:flex;gap:4px;background:rgba(15,23,42,.55);border:1px solid var(--line);
-   border-radius:13px;padding:4px;margin:4px 0 12px;flex-wrap:wrap;}
- .seg button{flex:1;min-width:54px;background:transparent;color:var(--mut);border:0;border-radius:9px;
-   padding:9px 6px;font-size:12px;font-weight:600;transition:.18s;cursor:pointer;}
- .seg button.on{background:var(--grad);color:var(--ink);font-weight:800;box-shadow:0 4px 12px rgba(34,211,238,.3);}
- #navP{background:transparent;border:0;padding:0;margin:2px 0 10px;gap:8px;}
- #navP button{flex:0 0 auto;min-width:0;background:rgba(148,163,184,.12);border:1px solid var(--line);
-   color:var(--txt);border-radius:10px;padding:8px 13px;}
- #navP button:disabled{opacity:.35;}
- #lblP{flex:1;text-align:center;align-self:center;font-size:12.5px;color:var(--txt);font-weight:600;}
- #capPeriodo{margin:0 4px 8px;font-size:11.5px;color:var(--mut2);}
-
- /* ---------- table ---------- */
- .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;}
- table{width:100%;border-collapse:collapse;font-size:12px;}
- th,td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;}
- thead th,tr:first-child th{color:var(--mut);font-weight:700;font-size:11px;}
- .rowlab{text-align:left;color:var(--mut);font-weight:600;}
- tbody tr:last-child td,table tr:last-child td{border-bottom:0;}
-
- /* ---------- inputs / buttons ---------- */
- input,button,textarea{font-family:inherit;}
- .in{width:100%;background:rgba(8,14,26,.7);color:var(--txt);border:1px solid var(--line);
-   border-radius:12px;padding:12px;font-size:14px;outline:none;transition:.18s;}
- .in:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(34,211,238,.16);}
- .btn{background:var(--grad);color:var(--ink);border:0;border-radius:12px;padding:12px 17px;
-   font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 6px 16px rgba(34,211,238,.28);transition:.18s;}
- .btn:active{transform:translateY(1px);}
- .btn.sec{background:rgba(148,163,184,.14);color:var(--txt);border:1px solid var(--line);box-shadow:none;}
- .dim{color:var(--mut);font-size:12px;line-height:1.55;}
- code{background:rgba(8,14,26,.7);padding:3px 7px;border-radius:7px;font-size:12px;color:var(--acc);
-   word-break:break-all;}
-
- /* ---------- chat ---------- */
- #t-treinador{max-width:100%;overflow-x:hidden;}
- .chiprow{display:flex;justify-content:flex-end;padding:2px 0 10px;}
- #chat{display:flex;flex-direction:column;gap:11px;min-height:46vh;max-width:100%;}
- .sep{align-self:center;color:var(--mut2);font-size:10.5px;letter-spacing:.5px;margin:8px 0 2px;
-   background:rgba(148,163,184,.1);padding:3px 11px;border-radius:20px;}
- .msg{max-width:86%;padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.5;
-   white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;box-shadow:0 4px 14px rgba(2,8,20,.3);}
- .msg.u{align-self:flex-end;background:var(--grad);color:var(--ink);font-weight:500;border-bottom-right-radius:5px;}
- .msg.a{align-self:flex-start;background:var(--card-solid);border:1px solid var(--line);border-bottom-left-radius:5px;}
- .chatform{display:flex;gap:9px;align-items:flex-end;position:sticky;
-   bottom:calc(76px + env(safe-area-inset-bottom));
-   background:linear-gradient(180deg,rgba(11,18,32,0),rgba(11,18,32,.92) 22%);
-   padding:10px 0 6px;width:100%;}
- .chatform textarea{flex:1;min-width:0;width:auto;resize:none;max-height:140px;}
- .chatform .send{flex:0 0 auto;width:46px;height:46px;padding:0;border-radius:14px;display:grid;place-items:center;}
- .chatform .send svg{width:20px;height:20px;}
-
- /* ---------- bottom nav ---------- */
- .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;gap:2px;
-   padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);
-   background:rgba(11,18,32,.86);backdrop-filter:saturate(160%) blur(16px);
-   -webkit-backdrop-filter:saturate(160%) blur(16px);border-top:1px solid var(--line);}
- .tabbar button{flex:1;background:transparent;border:0;color:var(--mut2);
-   display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px;
-   font-size:11px;font-weight:600;cursor:pointer;transition:.16s;border-radius:12px;position:relative;}
- .tabbar button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9;}
- .tabbar button.on{color:var(--acc);}
- .tabbar button.on::after{content:"";position:absolute;top:0px;width:22px;height:3px;border-radius:3px;background:var(--grad);}
+ @keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
 
  /* ---------- login ---------- */
- .center{max-width:380px;margin:14vh auto;text-align:center;padding:0 18px;}
- .center h1{font-size:26px;font-weight:800;margin:0 0 4px;}
- .center .in{margin:7px 0;}
+ .login{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;justify-content:center;
+   padding:0 34px env(safe-area-inset-bottom);background:radial-gradient(120% 60% at 50% 0%,#171411 0%,#0b0c0e 60%);}
+ .login h1{font-size:30px;font-weight:850;letter-spacing:-.5px;line-height:1.05;margin:0;}
+ .login .sub{font-size:14px;color:var(--mut);margin-top:8px;line-height:1.5;}
+ .lg-in{width:100%;background:var(--card);color:var(--txt);border:1px solid var(--line2);border-radius:14px;
+   padding:15px 16px;font-size:15px;outline:none;margin-top:12px;}
+ .blob{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:var(--acc);
+   box-shadow:0 14px 36px rgba(255,94,58,.4);margin-bottom:22px;}
+
+ /* ---------- app shell ---------- */
+ .app{display:flex;flex-direction:column;height:100dvh;height:100vh;}
+ header{flex:0 0 auto;display:flex;align-items:center;gap:11px;
+   padding:calc(env(safe-area-inset-top) + 14px) 18px 14px;background:var(--bg);border-bottom:1px solid var(--line);}
+ .logo{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--acc);
+   flex:0 0 auto;box-shadow:0 6px 16px rgba(255,94,58,.34);}
+ .brand b{font-size:16.5px;font-weight:850;letter-spacing:-.2px;display:block;}
+ .brand span{font-size:9.5px;color:var(--mut2);text-transform:uppercase;letter-spacing:1.6px;font-weight:800;margin-top:2px;display:block;}
+ .ghost{background:rgba(255,255,255,.06);color:var(--txt2);border:1px solid var(--line2);border-radius:11px;
+   padding:9px 13px;font-size:12.5px;font-weight:700;cursor:pointer;}
+ .scroll{flex:1 1 auto;overflow-y:auto;position:relative;-webkit-overflow-scrolling:touch;}
+ main{padding:18px 16px 28px;}
+
+ /* ---------- section label ---------- */
+ .seclbl{display:flex;align-items:center;gap:8px;margin:26px 4px 12px;}
+ .seclbl::before{content:"";width:16px;height:3px;border-radius:3px;background:var(--acc);}
+ .seclbl span{font-size:11px;text-transform:uppercase;letter-spacing:1.4px;color:var(--mut);font-weight:800;}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 14px;}
+
+ /* ---------- hero prontidao ---------- */
+ .hero{display:flex;align-items:center;gap:18px;background:linear-gradient(140deg,#1a1410 0%,#15171a 58%);
+   border:1px solid var(--accline);border-radius:22px;padding:20px;margin-bottom:4px;}
+ .ring{position:relative;flex:0 0 auto;width:98px;height:98px;}
+ .ring svg{width:98px;height:98px;display:block;}
+ .ring .bg{stroke:rgba(255,255,255,.08);}
+ .ring .fg{stroke:var(--acc);transition:stroke-dasharray .5s;}
+ .ring-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+ .ring-v{font-size:30px;font-weight:850;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+ .ring-s{font-size:8.5px;color:var(--mut2);text-transform:uppercase;letter-spacing:1.4px;font-weight:800;margin-top:2px;}
+ .hero-k{font-size:10px;color:var(--mut2);text-transform:uppercase;letter-spacing:1.6px;font-weight:800;}
+ .hero-t{font-size:21px;font-weight:850;color:var(--acc);margin-top:5px;letter-spacing:-.3px;}
+ .hero-d{font-size:13px;color:var(--mut);margin-top:6px;line-height:1.5;}
+
+ /* ---------- KPIs ---------- */
+ .kpis{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px;}
+ .kpi{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 15px 14px;}
+ .kpi-l{font-size:10px;color:var(--mut2);text-transform:uppercase;letter-spacing:.8px;font-weight:800;}
+ .kpi-row{display:flex;align-items:baseline;gap:5px;margin-top:9px;}
+ .kpi-v{font-size:28px;font-weight:850;letter-spacing:-1px;line-height:1;font-variant-numeric:tabular-nums;}
+ .kpi-u{font-size:12px;color:var(--mut2);font-weight:700;}
+ .kpi-sub{font-size:11px;color:var(--mut3);margin-top:5px;font-weight:600;}
+
+ /* ---------- segmented ---------- */
+ .seg{display:flex;gap:5px;background:var(--seg);border:1px solid var(--line);border-radius:14px;padding:5px;flex-wrap:wrap;}
+ .seg button{flex:1;min-width:46px;background:transparent;color:var(--mut);border:0;border-radius:9px;
+   padding:9px 4px;font-size:12px;font-weight:800;cursor:pointer;transition:.15s;}
+ .seg button.on{background:var(--acc);color:var(--ink);}
+ #navP{background:transparent;border:0;padding:0;margin:10px 0 0;gap:8px;}
+ #navP button{flex:0 0 auto;min-width:0;background:rgba(255,255,255,.06);border:1px solid var(--line2);
+   color:var(--txt2);border-radius:11px;padding:8px 14px;font-weight:700;}
+ #navP button:disabled{opacity:.3;}
+ #lblP{flex:1;text-align:center;align-self:center;font-size:12.5px;color:var(--txt2);font-weight:700;}
+ #capPeriodo{font-size:11.5px;color:var(--mut3);margin:11px 4px 12px;font-weight:600;}
+
+ /* ---------- table ---------- */
+ .tcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:4px;overflow-x:auto;}
+ table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;}
+ th,td{padding:10px 11px;white-space:nowrap;}
+ thead th{color:var(--mut2);font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;text-align:right;}
+ tbody tr{border-top:1px solid rgba(255,255,255,.05);}
+ td{text-align:right;color:var(--txt);font-weight:600;}
+ .rowlab,td.rowlab{text-align:left;color:var(--txt2);font-weight:700;}
+ thead th:first-child{text-align:left;}
+
+ /* ---------- charts ---------- */
+ .chartbox{height:178px;}
+ #maisCharts .card{margin-top:0;}
+
+ /* ---------- inputs / buttons ---------- */
+ .field{font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--mut2);font-weight:800;margin:0 2px 9px;}
+ .in{width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--line2);border-radius:12px;padding:13px;font-size:14px;outline:none;}
+ .in:focus{border-color:var(--acc);}
+ .btn{background:var(--acc);color:var(--ink);border:0;border-radius:12px;padding:14px 18px;font-size:14px;font-weight:850;cursor:pointer;}
+ .btn.block{width:100%;}
+ .dim{color:var(--mut3);font-size:12px;line-height:1.55;}
+ code{display:block;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+   font-size:12.5px;color:var(--acc);word-break:break-all;}
+ .h1{font-size:19px;font-weight:850;letter-spacing:-.3px;}
+
+ /* ---------- avaliacao ---------- */
+ .coach{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:14px;
+   padding:16px;white-space:pre-wrap;line-height:1.62;font-size:13.8px;color:var(--txt2);}
+ .coach.dim{color:var(--mut);border-left-color:var(--mut2);white-space:normal;}
+
+ /* ---------- chat ---------- */
+ #t-treinador{display:flex;flex-direction:column;min-height:100%;padding:0;}
+ .chatbar{display:flex;align-items:center;gap:9px;padding:14px 16px 8px;position:sticky;top:0;background:var(--bg);z-index:5;}
+ #chat{flex:1;display:flex;flex-direction:column;gap:11px;padding:8px 16px 14px;}
+ .sep{align-self:center;color:var(--mut3);font-size:10.5px;font-weight:700;letter-spacing:.4px;
+   background:rgba(255,255,255,.05);padding:4px 12px;border-radius:20px;}
+ .msg{max-width:84%;padding:12px 15px;border-radius:18px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word;}
+ .msg.u{align-self:flex-end;background:var(--acc);color:var(--ink);font-weight:500;border-bottom-right-radius:5px;}
+ .msg.a{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px;}
+ .chatform{position:sticky;bottom:0;display:flex;gap:9px;align-items:flex-end;
+   padding:10px 16px calc(env(safe-area-inset-bottom) + 14px);
+   background:linear-gradient(180deg,rgba(11,12,14,0),#0b0c0e 28%);}
+ .chatform textarea{flex:1;min-width:0;resize:none;max-height:120px;line-height:1.4;}
+ .send{flex:0 0 auto;width:46px;height:46px;border:0;border-radius:14px;background:var(--acc);
+   display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 20px rgba(255,94,58,.3);}
+ .send svg{width:20px;height:20px;}
+
+ /* ---------- tabbar ---------- */
+ .tabbar{flex:0 0 auto;display:flex;gap:2px;padding:9px 10px calc(env(safe-area-inset-bottom) + 12px);
+   background:var(--bg);border-top:1px solid var(--line);}
+ .tabbar button{flex:1;background:transparent;border:0;color:var(--mut2);display:flex;flex-direction:column;
+   align-items:center;gap:4px;padding:5px 4px;font-size:11px;font-weight:700;cursor:pointer;position:relative;}
+ .tabbar button svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:2;}
+ .tabbar button.on{color:var(--acc);}
+ .tabbar button.on::after{content:"";position:absolute;top:-9px;width:22px;height:3px;border-radius:3px;background:var(--acc);}
 </style></head><body>
 
-<div id="login" class="center hide">
-  <h1>&#127947; Garmin Coach</h1>
-  <p class="dim">Entre com e-mail e senha.</p>
-  <input id="email" class="in" type="email" placeholder="seu@email.com" autocomplete="email">
-  <input id="senha" class="in" type="password" placeholder="senha (6+ caracteres)" autocomplete="current-password">
-  <p></p>
-  <button id="entrar" class="btn">Entrar</button>
-  <button id="criar" class="btn sec" style="margin-left:6px">Criar senha</button>
+<div id="login" class="login hide">
+  <div class="blob"><svg viewBox="0 0 24 24" width="32" height="32" fill="none"><path d="M3 14l4-6.5a1 1 0 0 1 1.7 0l3 5 2.4-3.6a1 1 0 0 1 1.7 0L21 14" stroke="#1a0e09" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="18.5" r="1.9" fill="#1a0e09"/></svg></div>
+  <h1>Garmin Coach</h1>
+  <div class="sub">Seu treinador pessoal.<br>Entre para ver a semana.</div>
+  <input id="email" class="lg-in" type="email" placeholder="seu@email.com" autocomplete="email">
+  <input id="senha" class="lg-in" type="password" placeholder="senha (6+ caracteres)" autocomplete="current-password">
+  <button id="entrar" class="btn block" style="margin-top:18px">Entrar</button>
+  <button id="criar" class="ghost" style="width:100%;margin-top:8px;padding:13px">Criar conta</button>
   <p id="loginMsg" class="dim"></p>
 </div>
 
-<div id="app" class="hide">
+<div id="app" class="app hide">
   <header>
-    <div class="logo" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M4 13.5l3.2-5.2a1 1 0 0 1 1.7 0l2.6 4.4 2-3a1 1 0 0 1 1.7 0L20 13.5" stroke="#042234" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="17.5" r="1.7" fill="#042234"/></svg>
-    </div>
+    <div class="logo"><svg viewBox="0 0 24 24" width="21" height="21" fill="none"><path d="M3 14l4-6.5a1 1 0 0 1 1.7 0l3 5 2.4-3.6a1 1 0 0 1 1.7 0L21 14" stroke="#1a0e09" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="18.5" r="1.7" fill="#1a0e09"/></svg></div>
     <div class="brand"><b>Garmin Coach</b><span>Treinador pessoal</span></div>
-    <div class="spacer"></div>
+    <div style="flex:1"></div>
     <button id="sair" class="ghost">Sair</button>
   </header>
 
-  <main id="t-painel">
-    <h2>Resumo</h2>
-    <div id="kpis" class="kpis"></div>
-    <h2>Evolu&ccedil;&atilde;o por per&iacute;odo</h2>
-    <div class="seg" id="seg">
-      <button data-g="dia">Dia</button>
-      <button data-g="sem">Semana</button>
-      <button data-g="mes" class="on">M&ecirc;s</button>
-      <button data-g="tri">Trim.</button>
-      <button data-g="ano">Ano</button>
-      <button data-g="tudo">Tudo</button>
-    </div>
-    <div class="seg" id="navP">
-      <button id="prevP">&#9664;</button>
-      <span id="lblP"></span>
-      <button id="nextP">&#9654;</button>
-    </div>
-    <p id="capPeriodo"></p>
-    <div class="card scroll"><div id="tabela"></div></div>
-    <h2>Carga de treino</h2><div class="card"><canvas id="cCarga"></canvas></div>
-    <h2>Sono e stress</h2><div class="card"><canvas id="cSaude"></canvas></div>
-    <h2>Frequ&ecirc;ncia card&iacute;aca</h2><div class="card"><canvas id="cFC"></canvas></div>
-    <div id="maisCharts"></div>
-    <p id="painelVazio" class="dim"></p>
-  </main>
+  <div class="scroll" id="scroll">
 
-  <main id="t-avaliacao" class="hide">
-    <div class="chiprow" style="justify-content:space-between;align-items:center">
-      <h2 style="margin:6px 4px 0">Avalia&ccedil;&atilde;o da semana</h2>
-      <button id="gerarAval2" class="ghost">Atualizar</button>
-    </div>
-    <div id="coachBox"></div>
-    <p id="avalMsg2" class="dim"></p>
-  </main>
+    <main id="t-painel">
+      <div id="heroProntidao" class="hero hide">
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50" fill="none" stroke-width="11"/><circle id="ringFill" class="fg" cx="60" cy="60" r="50" fill="none" stroke-width="11" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 60 60)"/></svg>
+          <div class="ring-c"><div id="ringVal" class="ring-v">--</div><div class="ring-s">/ 100</div></div>
+        </div>
+        <div style="min-width:0">
+          <div class="hero-k">Prontid&atilde;o para treino</div>
+          <div id="readyLabel" class="hero-t">&mdash;</div>
+          <div id="readyDesc" class="hero-d"></div>
+        </div>
+      </div>
 
-  <main id="t-treinador" class="hide">
-    <div class="chiprow" style="gap:8px;align-items:center;justify-content:space-between">
-      <select id="histData" class="in" style="flex:1;padding:9px 11px;font-size:13px"></select>
-      <button id="novaConv" class="ghost">+ Nova</button>
-    </div>
-    <div id="chat"></div>
-    <div class="chatform">
-      <textarea id="q" class="in" rows="1" placeholder="Pergunte ao treinador..."></textarea>
-      <button id="enviar" class="btn send" aria-label="Enviar">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12l16-8-6 16-2.5-6.2L4 12z" fill="#042234"/></svg>
-      </button>
-    </div>
-    <p id="treinoMsg" class="dim"></p>
-  </main>
+      <div class="seclbl"><span>Resumo</span></div>
+      <div id="kpis" class="kpis"></div>
 
-  <main id="t-config" class="hide">
-    <h2>Chave da IA (fica s&oacute; neste aparelho)</h2>
-    <div class="card">
-      <input id="apikey" class="in" type="password" placeholder="sk-ant-...">
-      <p></p><button id="salvarKey" class="btn">Salvar chave</button>
-      <p class="dim">A chave fica no armazenamento deste aparelho (localStorage) e &eacute; usada para falar direto com a Claude. N&atilde;o vai para o Supabase nem para o GitHub.</p>
-    </div>
-    <h2>Seu ID (para configurar o PC)</h2>
-    <div class="card"><code id="uid" class="dim"></code>
-      <p class="dim">Copie este ID para o arquivo data/supabase.json do PC (campo user_id).</p></div>
-    <h2>Gerar avalia&ccedil;&atilde;o agora</h2>
-    <div class="card"><button id="gerarAval" class="btn">Gerar avalia&ccedil;&atilde;o da semana</button>
-      <p id="avalMsg" class="dim"></p></div>
-  </main>
+      <div class="seclbl"><span>Evolu&ccedil;&atilde;o por per&iacute;odo</span></div>
+      <div class="seg" id="seg">
+        <button data-g="dia">Dia</button>
+        <button data-g="sem">Sem.</button>
+        <button data-g="mes" class="on">M&ecirc;s</button>
+        <button data-g="tri">Trim.</button>
+        <button data-g="ano">Ano</button>
+        <button data-g="tudo">Tudo</button>
+      </div>
+      <div class="seg" id="navP">
+        <button id="prevP">&#9664;</button>
+        <span id="lblP"></span>
+        <button id="nextP">&#9654;</button>
+      </div>
+      <p id="capPeriodo"></p>
+      <div class="tcard"><div id="tabela"></div></div>
+
+      <div class="seclbl"><span>Carga de treino</span></div>
+      <div class="card"><div class="chartbox"><canvas id="cCarga"></canvas></div></div>
+      <div class="seclbl"><span>Sono &amp; stress</span></div>
+      <div class="card"><div class="chartbox"><canvas id="cSaude"></canvas></div></div>
+      <div class="seclbl"><span>FC de repouso</span></div>
+      <div class="card"><div class="chartbox"><canvas id="cFC"></canvas></div></div>
+      <div id="maisCharts"></div>
+      <p id="painelVazio" class="dim"></p>
+    </main>
+
+    <main id="t-avaliacao" class="hide">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="h1">Avalia&ccedil;&atilde;o da semana</div>
+        <button id="gerarAval2" class="ghost">Atualizar</button>
+      </div>
+      <div id="coachBox"></div>
+      <p id="avalMsg2" class="dim"></p>
+    </main>
+
+    <main id="t-treinador" class="hide">
+      <div class="chatbar">
+        <select id="histData" class="in" style="flex:1;background:var(--card);padding:9px 11px;font-size:13px;color:var(--txt2)"></select>
+        <button id="novaConv" class="ghost" style="white-space:nowrap">+ Nova</button>
+      </div>
+      <div id="chat"></div>
+      <div class="chatform">
+        <textarea id="q" class="in" rows="1" placeholder="Pergunte ao treinador&hellip;" style="background:var(--card)"></textarea>
+        <button id="enviar" class="send" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5l15-7-6.2 15.2-2.3-5.9L4 11.5z" fill="#1a0e09"/></svg></button>
+      </div>
+      <p id="treinoMsg" class="dim" style="padding:0 16px"></p>
+    </main>
+
+    <main id="t-config" class="hide">
+      <div class="h1" style="margin-bottom:16px">Ajustes</div>
+      <div class="field">Chave da IA (s&oacute; neste aparelho)</div>
+      <div class="card" style="padding:16px">
+        <input id="apikey" class="in" type="password" placeholder="sk-ant-&hellip;">
+        <button id="salvarKey" class="btn" style="margin-top:12px">Salvar chave</button>
+        <p class="dim" style="margin-top:12px">A chave fica s&oacute; neste aparelho e &eacute; usada para falar direto com a Claude. N&atilde;o vai para o Supabase nem para o GitHub.</p>
+      </div>
+      <div class="field">Seu ID (para o PC)</div>
+      <div class="card" style="padding:16px">
+        <code id="uid"></code>
+        <p class="dim" style="margin-top:12px">Copie este ID para o arquivo data/supabase.json do PC (campo user_id).</p>
+      </div>
+      <div class="field">Avalia&ccedil;&atilde;o</div>
+      <div class="card" style="padding:16px">
+        <button id="gerarAval" class="btn block">Gerar avalia&ccedil;&atilde;o da semana</button>
+        <p id="avalMsg" class="dim" style="margin-top:10px"></p>
+      </div>
+    </main>
+
+  </div>
 
   <nav class="tabbar">
     <button data-t="painel" class="on">
@@ -252,7 +272,7 @@
   </nav>
 </div>
 
-<script>if(window.Chart){Chart.defaults.color="#90a4bd";Chart.defaults.borderColor="rgba(148,163,184,.14)";Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif";Chart.defaults.font.size=11;}</script>
+<script>if(window.Chart){Chart.defaults.color="#8b8784";Chart.defaults.borderColor="rgba(255,255,255,.06)";Chart.defaults.font.family="-apple-system,Segoe UI,Roboto,sans-serif";Chart.defaults.font.size=11;}</script>
 <script src="config.js"></script>
 <script src="app.js"></script>
 </body></html>
