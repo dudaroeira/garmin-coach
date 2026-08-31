@@ -10,7 +10,10 @@ const sinceVal=()=>localStorage.getItem(KEYSINCE)||"";
 const SYSTEM = `Voce e um treinador pessoal experiente em ciclismo e treino de forca, com base cientifica (fisiologia, periodizacao, treino polarizado, forca para ciclistas, recuperacao, sono, gestao de carga). Acompanha UM atleta de forma proxima e continua.
 Jeito: portugues do Brasil, caloroso, direto e motivador; especifico e acionavel; honesto; usa os DADOS fornecidos; LEMBRA do historico e dos seus conselhos anteriores fazendo continuidade; prioriza recuperacao/sono/prevencao de lesao.
 Seguranca: nao e medico (diante de dor/sintomas, oriente buscar profissional); nunca recomende doping ou praticas de risco; se faltar dado, diga o que observar sem inventar.
-Comente explicitamente o SLEEP SCORE, o BODY BATTERY (pico do dia) e a HRV da semana como marcadores de recuperacao. Seja conciso nas secoes de perfil/saude (evite tabelas longas) para sobrar espaco. Comente CADA atividade da ultima semana completa, uma por uma (cite cada treino pela data e nome, com o que achou) -- nao resuma apenas as mais relevantes e COMPARE sessoes da mesma modalidade entre si e ao longo das semanas para mostrar evolucao. Ao comentar uma atividade, refira-se a ela pela DATA (ex.: 'no pedal de 05/06...'). Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.\nNa avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
+Comente explicitamente o SLEEP SCORE, o BODY BATTERY (pico do dia) e a HRV da semana como marcadores de recuperacao. Seja conciso nas secoes de perfil/saude (evite tabelas longas) para sobrar espaco. Comente CADA atividade da ultima semana completa, uma por uma (cite cada treino pela data e nome, com o que achou) -- nao resuma apenas as mais relevantes e COMPARE sessoes da mesma modalidade entre si e ao longo das semanas para mostrar evolucao. Ao comentar uma atividade, refira-se a ela pela DATA (ex.: 'no pedal de 05/06...'). Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curso (parcial) -- ela distorce volume e carga. Sempre acompanhe a EVOLUCAO DO PERFIL: cite FC de repouso, VO2max, FTP e FC max atuais e compare com a vez anterior (ex.: FC repouso caiu de 57 para 54 = melhora), usando os indicadores semana a semana.
+ESTATISTICA ROBUSTA: os dados de saude vem como MEDIANA (nao media) justamente porque a mediana ignora dias atipicos isolados. Use as MEDIANAS como base do diagnostico. A secao EVENTOS ATIPICOS lista os dias que fugiram do padrao: trate cada um como EVENTO PONTUAL -- comente-o a parte ('na quarta X aconteceu Y, provavelmente por Z') e NAO deixe um unico dia definir a leitura da semana, do mes ou do trimestre. Nunca chame de 'tendencia' algo explicado por 1-2 dias atipicos; tendencia exige padrao sustentado em varias semanas.
+COMPARACOES EM 3 NIVEIS: alem de semana x semana, compare MES x MES e TRIMESTRE x TRIMESTRE usando as secoes MES A MES e TRIMESTRE A TRIMESTRE do contexto (volume, carga, sono, stress, FC repouso, HRV, VO2max). Periodos marcados '(parcial)' estao em curso: cite-os so como observacao, nunca como base de conclusao.
+Na avaliacao semanal use secoes curtas: Como foi a semana / Evolucao do perfil / Visao mensal e trimestral / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho.`;
 
 const UID_FIXO="11dd4f4a-634a-48bf-a5a7-c12220c3b22d";
 let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
@@ -30,22 +33,46 @@ function _bucketsJS(gran){
 }
 const avgN=arr=>arr.length?Math.round(arr.reduce((x,y)=>x+y,0)/arr.length*10)/10:null;
 const maxN=arr=>arr.length?Math.max.apply(null,arr):null;
+// mediana: robusta a eventos isolados (1 dia atipico nao distorce o periodo)
+const medN=arr=>{if(!arr.length)return null;const s=[...arr].sort((a,b)=>a-b);const m=Math.floor(s.length/2);const v=s.length%2?s[m]:(s[m-1]+s[m])/2;return Math.round(v*10)/10;};
 
 function digest(a){
   if(!a) return "Sem dados ainda.";
   const p=a.perfil||{},r=a.resumo||{},sd=a.saude||{},L=[];
   L.push(`PERFIL: idade ${p.idade}, sexo ${p.sexo}, FC max ${p.fc_max}, FC repouso ${p.fc_repouso}, FTP ${p.ftp||"sem medidor de potencia"}`);
   L.push(`JANELA: ${a.dias} dias ate ${a.gerado_em} | ${r.n_atividades} atividades (${r.n_ciclismo} pedais, ${r.n_forca} forca) | ${r.horas_total}h | ACWR atual ${r.acwr_atual}`);
-  L.push(`SAUDE (media 30d): sono ${sd.media_sono_30d}h, stress ${sd.media_stress_30d}, passos ${sd.media_passos_30d}, cal ativas ${sd.media_cal_ativas_30d}`);
+  const med=(m,fb)=>sd[m]!=null?sd[m]:sd[fb];
+  L.push(`SAUDE 30d (MEDIANAS - robustas a dias atipicos): sono ${med("mediana_sono_30d","media_sono_30d")}h, stress ${med("mediana_stress_30d","media_stress_30d")}, FC repouso ${sd.mediana_fcrep_30d??"-"}, HRV ${sd.mediana_hrv_30d??"-"}ms, passos ${med("mediana_passos_30d","media_passos_30d")}, cal ativas ${med("mediana_cal_ativas_30d","media_cal_ativas_30d")}`);
   const z=a.zonas_fc||{}; const tot=Object.values(z).reduce((x,y)=>x+y,0)||1;
   if(Object.keys(z).length) L.push("TEMPO POR ZONA DE FC: "+Object.entries(z).map(([k,v])=>`${k} ${Math.round(100*v/tot)}%`).join(", "));
-  // semana a semana (ultimas 12)
+  // eventos atipicos detectados pela analise (dia fora do padrao = evento pontual)
+  const ev=a.eventos_atipicos||[];
+  if(ev.length){
+    L.push("EVENTOS ATIPICOS (dias isolados fora do padrao dos ultimos 45d - trate como eventos pontuais, NAO como tendencia):");
+    ev.slice(0,10).forEach(e=>L.push(`  ${e.data} (${e.dia_semana}): ${e.metrica} ${e.valor}${e.unidade||""} ${e.direcao} do normal (mediana ${e.mediana_janela}${e.unidade||""})`));
+  }
+  const hojeISO=a.gerado_em||new Date().toISOString().slice(0,10);
+  // semana a semana (ultimas 12) - medianas nas metricas de saude
   try{
-    const hojeWk=wkKeyG(a.gerado_em||new Date().toISOString().slice(0,10));
+    const hojeWk=wkKeyG(hojeISO);
     const sem=_bucketsJS("sem").filter(b=>b.k!==hojeWk).slice(-12);
-    L.push("SEMANA A SEMANA (apenas semanas COMPLETAS; a semana em curso foi omitida):");
-    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${avgN(b.sono)??"-"}h(score ${avgN(b.sscore)??"-"}), stress ${avgN(b.stress)??"-"}, FCrep ${avgN(b.fcrep)??"-"}, bodyBattery pico-medio ${avgN(b.bba)??"-"} (vale ${avgN(b.bbb)??"-"}), HRV ${avgN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
+    L.push("SEMANA A SEMANA (apenas semanas COMPLETAS; a semana em curso foi omitida; saude em MEDIANA):");
+    sem.forEach(b=>L.push(`  ${b.k}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${medN(b.sono)??"-"}h(score ${medN(b.sscore)??"-"}), stress ${medN(b.stress)??"-"}, FCrep ${medN(b.fcrep)??"-"}, bodyBattery pico ${medN(b.bba)??"-"} (vale ${medN(b.bbb)??"-"}), HRV ${medN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
   }catch(e){ console.error("digest semana-a-semana falhou:",e); }
+  // mes a mes (ultimos 7; o mes em curso e marcado como parcial)
+  try{
+    const mesAtual=hojeISO.slice(0,7);
+    const ms=_bucketsJS("mes").slice(-7);
+    L.push("MES A MES (saude em MEDIANA; compare mes x mes anterior e mesmo mes de antes):");
+    ms.forEach(b=>L.push(`  ${b.k}${b.k===mesAtual?" (parcial)":""}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${medN(b.sono)??"-"}h, stress ${medN(b.stress)??"-"}, FCrep ${medN(b.fcrep)??"-"}, HRV ${medN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
+  }catch(e){ console.error("digest mes-a-mes falhou:",e); }
+  // trimestre a trimestre (o trimestre em curso e marcado como parcial)
+  try{
+    const kfT=keyFnG("tri"); const triAtual=kfT(hojeISO);
+    const ts=_bucketsJS("tri").slice(-6);
+    L.push("TRIMESTRE A TRIMESTRE (saude em MEDIANA; visao de longo prazo):");
+    ts.forEach(b=>L.push(`  ${b.k}${b.k===triAtual?" (parcial)":""}: carga ${Math.round(b.carga)}, pedal ${b.cic_h.toFixed(1)}h(${b.cic_n}), forca ${b.for_n}x, km ${Math.round(b.km)}, sono ${medN(b.sono)??"-"}h, stress ${medN(b.stress)??"-"}, FCrep ${medN(b.fcrep)??"-"}, HRV ${medN(b.hrv)??"-"}, VO2 ${b.vo2??"-"}`));
+  }catch(e){ console.error("digest tri-a-tri falhou:",e); }
   // atividades recentes detalhadas (ultimas 15)
   const ats=(a.ativs||[]).slice().sort((x,y)=>(x.d<y.d?-1:(x.d>y.d?1:0))).slice(-20);
   if(ats.length){
@@ -85,7 +112,7 @@ function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slic
 async function gerarAvaliacao(){
   const hist=await getHistorico();
   const ctx=contexto(hist);
-  const t1=await callClaude(ctx,[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA (apenas semana COMPLETA) com as secoes: Como foi a semana / Evolucao do perfil (FC repouso, VO2max, FTP, FC max, sleep score, body battery pico do dia, HRV, comparando com antes) / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho. NAO analise treino-a-treino aqui (vem em secao separada). De continuidade aos seus conselhos anteriores."}],2500);
+  const t1=await callClaude(ctx,[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA (apenas semana COMPLETA) com as secoes: Como foi a semana / Evolucao do perfil (FC repouso, VO2max, FTP, FC max, sleep score, body battery pico do dia, HRV, comparando com antes) / Visao mensal e trimestral (compare o mes atual com os anteriores e o trimestre atual com os anteriores, usando as MEDIANAS das secoes MES A MES e TRIMESTRE A TRIMESTRE; ignore periodos parciais como base de conclusao) / O que evoluiu / Pontos de atencao / Plano para a proxima semana / Um empurraozinho. IMPORTANTE: baseie o diagnostico nas MEDIANAS; se houver EVENTOS ATIPICOS na janela, comente cada um como evento pontual e explique que ele nao define a tendencia. NAO analise treino-a-treino aqui (vem em secao separada). De continuidade aos seus conselhos anteriores."}],3000);
   const t2=await callClaude(ctx,[{role:"user",content:"Analise UMA POR UMA, sem cortar, TODAS as atividades da ultima semana COMPLETA. Para cada uma: cite a data e o nome e, em 2-4 linhas, comente FC media/max, carga, cadencia/potencia e training effect quando houver, comparando com sessoes semelhantes. Comece direto pela primeira atividade, sem introducao."}],3500);
   const texto=t1+"\n\n---\n\n## Analise das atividades (treino a treino) \ud83c\udfcb\ufe0f\n\n"+t2;
   await sb.from("coach_history").insert({user_id:UID,resumo:Object.assign({},ANALISE?.resumo||{},{perfil:ANALISE?.perfil||{}}),texto});
@@ -156,8 +183,8 @@ function renderPainel(){
     {l:"Pedais",v:r.n_ciclismo,u:"",sub:"ciclismo"},
     {l:"Força",v:r.n_forca,u:"",sub:"sessões"},
     {l:"ACWR",v:r.acwr_atual!=null?Number(r.acwr_atual).toFixed(2):"--",u:"",sub:"carga aguda/crônica"},
-    {l:"Sono",v:sd.media_sono_30d??"--",u:sd.media_sono_30d!=null?"h":"",sub:"média 30 dias"},
-    {l:"Stress",v:sd.media_stress_30d??"--",u:"",sub:"média 30 dias"}];
+    {l:"Sono",v:(sd.mediana_sono_30d??sd.media_sono_30d)??"--",u:(sd.mediana_sono_30d??sd.media_sono_30d)!=null?"h":"",sub:"mediana 30 dias"},
+    {l:"Stress",v:(sd.mediana_stress_30d??sd.media_stress_30d)??"--",u:"",sub:"mediana 30 dias"}];
   const kpiBox=$("kpis"); kpiBox.replaceChildren();
   for(const k of kp){
     const c=document.createElement("div"); c.className="kpi";
