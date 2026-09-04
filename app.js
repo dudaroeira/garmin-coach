@@ -14,12 +14,14 @@ Compare SEMPRE apenas semanas COMPLETAS; NUNCA tire conclusoes da semana em curs
 ESTATISTICA ROBUSTA: os dados de saude vem como MEDIANA (nao media) justamente porque a mediana ignora dias atipicos isolados. Use as MEDIANAS como base do diagnostico. A secao EVENTOS ATIPICOS lista os dias que fugiram do padrao: trate cada um como EVENTO PONTUAL -- 1 linha cada, sem deixar um unico dia definir a leitura da semana, do mes ou do trimestre. Nunca chame de 'tendencia' algo explicado por 1-2 dias atipicos; tendencia exige padrao sustentado em varias semanas.
 COMPARACOES EM 3 NIVEIS: alem de semana x semana, compare MES x MES e TRIMESTRE x TRIMESTRE usando as secoes MES A MES e TRIMESTRE A TRIMESTRE do contexto. Periodos marcados '(parcial)' estao em curso: cite-os so como observacao, nunca como base de conclusao.
 TREINOS: NAO analise treino a treino. AGRUPE as sessoes parecidas em 1 linha so (ex.: '5 sessoes de forca estaveis: 60-70min, carga 7-14, FC media ~95') e detalhe individualmente, pela data, APENAS o que fugiu do padrao (recorde, carga muito acima/abaixo, modalidade nova) e os pedais.
-ESTILO ENXUTO: a avaliacao semanal completa deve ter NO MAXIMO ~400 palavras (1 tela e meia de celular). Cada numero aparece UMA unica vez, na secao certa -- proibido repetir o mesmo dado em outra secao. Frases curtas, zero preambulo, zero tabelas. Feche com UMA frase de incentivo no fim do plano (sem secao propria).
-A avaliacao semanal tem EXATAMENTE 4 secoes, nesta ordem:
+RELACOES TREINO x SAUDE: a secao RELACOES do contexto traz correlacoes de Spearman e comparacoes de grupos por mediana calculadas sobre ~1 ano de dados. Cite APENAS relacoes presentes nesses numeros (com a forca: fraca/moderada/forte) -- nunca invente relacao. Fale em 'associacao', nao em causa provada. Correlacao 'desprezivel' significa que os dados NAO mostram relacao: se o atleta supoe uma relacao que os dados nao sustentam, diga isso com honestidade. Use as comparacoes de grupos ('apos treino pesado vs leve', 'noite boa vs ruim') para tornar o efeito concreto.
+ESTILO ENXUTO: a avaliacao semanal completa deve ter NO MAXIMO ~450 palavras (menos de 2 telas de celular). Cada numero aparece UMA unica vez, na secao certa -- proibido repetir o mesmo dado em outra secao. Frases curtas, zero preambulo, zero tabelas. Feche com UMA frase de incentivo no fim do plano (sem secao propria).
+A avaliacao semanal tem EXATAMENTE 5 secoes, nesta ordem:
 1. Como foi a semana -- volume/carga vs semana anterior, treinos agrupados + destaques pela data (3-6 linhas).
 2. Saude e recuperacao -- sono (score), stress, HRV, body battery pico, FC repouso, em MEDIANAS; eventos atipicos como eventos pontuais (4-7 linhas).
-3. Evolucao -- SO o que mudou: perfil (FC repouso, VO2max, FTP, FC max) vs avaliacao anterior + mes x mes + trimestre x trimestre (3-6 linhas).
-4. Plano da proxima semana -- 3 a 5 acoes concretas e verificaveis, em lista (1 linha cada).`;
+3. Relacoes treino x saude -- 2 a 4 linhas: as associacoes mais relevantes da secao RELACOES aplicadas ao que aconteceu NESTA semana (ex.: 'seus dados mostram que treino pesado derruba sua HRV na noite seguinte; foi o que ocorreu apos o treino de terca').
+4. Evolucao -- SO o que mudou: perfil (FC repouso, VO2max, FTP, FC max) vs avaliacao anterior + mes x mes + trimestre x trimestre (3-6 linhas).
+5. Plano da proxima semana -- 3 a 5 acoes concretas e verificaveis, em lista (1 linha cada).`;
 
 const UID_FIXO="11dd4f4a-634a-48bf-a5a7-c12220c3b22d";
 let UID = UID_FIXO, ANALISE = null, SNAP_AT = null;
@@ -57,6 +59,23 @@ function digest(a){
     L.push("EVENTOS ATIPICOS (dias isolados fora do padrao dos ultimos 45d - trate como eventos pontuais, NAO como tendencia):");
     ev.slice(0,10).forEach(e=>L.push(`  ${e.data} (${e.dia_semana}): ${e.metrica} ${e.valor}${e.unidade||""} ${e.direcao} do normal (mediana ${e.mediana_janela}${e.unidade||""})`));
   }
+  // relacoes treino x saude (correlacoes calculadas sobre ~1 ano)
+  try{
+    const co=a.correlacoes;
+    if(co){
+      L.push(`RELACOES TREINO x SAUDE (${co.n_dias} dias; rho de Spearman -1..1; associacao, NAO causa; grupos por MEDIANA):`);
+      (co.spearman||[]).filter(s=>s.forca!=="desprezivel").slice(0,6)
+        .forEach(s=>L.push(`  ${s.par}: rho ${s.rho} (${s.forca}, n=${s.n})`));
+      const semRel=(co.spearman||[]).filter(s=>s.forca==="desprezivel").slice(0,6).map(s=>s.par);
+      if(semRel.length) L.push("  SEM relacao detectavel nos dados: "+semRel.join("; "));
+      const g1=co.grupos&&co.grupos.noite_apos_treino_pesado_vs_leve;
+      if(g1){const ns=g1.noite_seguinte;
+        L.push(`  Noite APOS treino pesado (carga med ${g1.carga_mediana.pesado}) vs leve (${g1.carga_mediana.leve}): sono ${ns.sono_h.apos_pesado}h vs ${ns.sono_h.apos_leve}h, score ${ns.sono_score.apos_pesado} vs ${ns.sono_score.apos_leve}, HRV ${ns.hrv.apos_pesado} vs ${ns.hrv.apos_leve}, FCrep ${ns.fc_repouso.apos_pesado} vs ${ns.fc_repouso.apos_leve}, BB pico ${ns.bateria_alta.apos_pesado} vs ${ns.bateria_alta.apos_leve}`);}
+      const g2=co.grupos&&co.grupos.treino_apos_noite_boa_vs_ruim;
+      if(g2){
+        L.push(`  Treino APOS noite boa (>=${g2.corte_sono_h}h) vs ruim: carga ${g2.carga_do_dia.noite_boa} vs ${g2.carga_do_dia.noite_ruim}, FC media treinos ${g2.fc_media_treinos.noite_boa} vs ${g2.fc_media_treinos.noite_ruim}, TE ${g2.te_maximo_dia.noite_boa} vs ${g2.te_maximo_dia.noite_ruim}`);}
+    }
+  }catch(e){ console.error("digest relacoes falhou:",e); }
   const hojeISO=a.gerado_em||new Date().toISOString().slice(0,10);
   // semana a semana (ultimas 12) - medianas nas metricas de saude
   try{
@@ -118,7 +137,7 @@ function contexto(hist){ const h=(hist||[]).map(x=>`--- ${(x.criado_em||"").slic
 async function gerarAvaliacao(){
   const hist=await getHistorico();
   const ctx=contexto(hist);
-  const texto=await callClaude(ctx,[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA (apenas semana COMPLETA), seguindo A RISCA as 4 secoes e o limite de ~400 palavras definidos nas instrucoes: 1) Como foi a semana (treinos AGRUPADOS + so os destaques pela data) 2) Saude e recuperacao (MEDIANAS; eventos atipicos = eventos pontuais, 1 linha cada) 3) Evolucao (so o que mudou: perfil vs avaliacao anterior, mes x mes, trimestre x trimestre) 4) Plano da proxima semana (3-5 acoes em lista). Cada numero aparece uma unica vez. De continuidade aos seus conselhos anteriores sem repeti-los."}],1100);
+  const texto=await callClaude(ctx,[{role:"user",content:"Faca a AVALIACAO DESTA SEMANA (apenas semana COMPLETA), seguindo A RISCA as 5 secoes e o limite de ~450 palavras definidos nas instrucoes: 1) Como foi a semana (treinos AGRUPADOS + so os destaques pela data) 2) Saude e recuperacao (MEDIANAS; eventos atipicos = eventos pontuais, 1 linha cada) 3) Relacoes treino x saude (2-4 linhas: as associacoes da secao RELACOES aplicadas ao que ocorreu nesta semana; so relacoes que os dados sustentam) 4) Evolucao (so o que mudou: perfil vs avaliacao anterior, mes x mes, trimestre x trimestre) 5) Plano da proxima semana (3-5 acoes em lista). Cada numero aparece uma unica vez. De continuidade aos seus conselhos anteriores sem repeti-los."}],1250);
   await sb.from("coach_history").insert({user_id:UID,resumo:Object.assign({},ANALISE?.resumo||{},{perfil:ANALISE?.perfil||{}}),texto});
   return texto;
 }
