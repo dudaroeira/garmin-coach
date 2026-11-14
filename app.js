@@ -16,6 +16,7 @@ ESTATISTICA ROBUSTA: os dados de saude vem como MEDIANA (nao media) justamente p
 COMPARACOES EM 3 NIVEIS: alem de semana x semana, compare MES x MES e TRIMESTRE x TRIMESTRE usando as secoes MES A MES e TRIMESTRE A TRIMESTRE do contexto. Periodos marcados '(parcial)' estao em curso: cite-os so como observacao, nunca como base de conclusao.
 TREINOS: NAO analise treino a treino. AGRUPE as sessoes parecidas em 1 linha so (ex.: '5 sessoes de forca estaveis: 60-70min, carga 7-14, FC media ~95') e detalhe individualmente, pela data, APENAS o que fugiu do padrao (recorde, carga muito acima/abaixo, modalidade nova) e os pedais.
 RELACOES TREINO x SAUDE: a secao RELACOES do contexto traz correlacoes de Spearman e comparacoes de grupos por mediana calculadas sobre ~1 ano de dados. Cite APENAS relacoes presentes nesses numeros (com a forca: fraca/moderada/forte) -- nunca invente relacao. Fale em 'associacao', nao em causa provada. Correlacao 'desprezivel' significa que os dados NAO mostram relacao: se o atleta supoe uma relacao que os dados nao sustentam, diga isso com honestidade. Use as comparacoes de grupos ('apos treino pesado vs leve', 'noite boa vs ruim') para tornar o efeito concreto.
+CONTEXTO DE VIDA DO ATLETA: ele viaja muito a trabalho (inclusive voos noturnos) e tem jantares de negocios, as vezes com alcool; o relogio nao sabe disso. Ele marca esses dias na secao CONTEXTO INFORMADO. A noite seguinte a um dia marcado esta EXPLICADA: cite-a em 1 linha ('o sono de quarta caiu, mas houve voo noturno na terca'), NAO a trate como tendencia, NAO a use como base da leitura da semana e NAO piore o VEREDITO so por causa dela -- julgue a semana pelos dias sem contexto. So aponte problema se a recuperacao continuar ruim 2 ou mais noites depois do evento. Quando houver linha 'EFEITO MEDIDO', use esses numeros para dizer o quanto aquilo custa a ELE; sem essa linha, nao estime efeito. No plano, adapte o treino ao contexto em vez de cobrar o planejado: dia seguinte a voo noturno ou jantar com alcool pede treino leve ou folga. O medico e o especialista em sono podem dar 1 dica pratica de mitigacao quando o contexto se repetir; nunca moralize sobre alcool. Se uma noite ruim NAO tem contexto marcado, pode perguntar em 1 frase se houve viagem ou jantar.
 ESTILO ENXUTO: a avaliacao semanal completa deve ter NO MAXIMO ~450 palavras (menos de 2 telas de celular). Cada numero aparece UMA unica vez, na secao certa -- proibido repetir o mesmo dado em outra secao. Frases curtas, zero preambulo, zero tabelas. Feche com UMA frase de incentivo no fim do plano (sem secao propria).
 A avaliacao semanal comeca com o VEREDITO DA JUNTA em 1 linha -- semaforo VERDE (treinar normal), AMARELO (atencao/ajustar) ou VERMELHO (priorizar recuperacao) + 1 frase com o porque (ex.: 'AMARELO -- treinando bem, mas a recuperacao noturna esta no limite'). Depois vem EXATAMENTE 5 secoes, nesta ordem:
 1. Como foi a semana -- lente do TREINADOR: volume/carga vs semana anterior, treinos agrupados + destaques pela data (3-6 linhas).
@@ -45,6 +46,21 @@ const maxN=arr=>arr.length?Math.max.apply(null,arr):null;
 // mediana: robusta a eventos isolados (1 dia atipico nao distorce o periodo)
 const medN=arr=>{if(!arr.length)return null;const s=[...arr].sort((a,b)=>a-b);const m=Math.floor(s.length/2);const v=s.length%2?s[m]:(s[m-1]+s[m])/2;return Math.round(v*10)/10;};
 
+/* ---------- contexto do dia: o que o relogio nao sabe (viagem, voo noturno, jantar, alcool) ---------- */
+const CTX_TAGS=[{k:"viagem",l:"Viagem"},{k:"voo_noturno",l:"Voo noturno"},{k:"jantar",l:"Jantar de negócios"},{k:"alcool",l:"Álcool"}];
+const CTX_ROT=Object.fromEntries(CTX_TAGS.map(t=>[t.k,t.l]));
+let CTX=new Map(), CTX_DIA=null, CTX_OK=true;
+function hojeLocal(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+function addDias(iso,n){const d=new Date(iso+"T12:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+const DSEM=["dom","seg","ter","qua","qui","sex","sáb"];
+function rotDia(iso){
+  const h=hojeLocal(), d=new Date(iso+"T12:00:00Z");
+  const base=DSEM[d.getUTCDay()]+" "+iso.slice(8,10)+"/"+iso.slice(5,7);
+  return iso===h?"Hoje · "+base:(iso===addDias(h,-1)?"Ontem · "+base:base);
+}
+// rotulos do contexto marcado num dia ("" se nada)
+function ctxTxt(dia){const c=CTX.get(dia); if(!c) return ""; const t=(c.tags||[]).map(k=>CTX_ROT[k]||k); if(c.nota) t.push("obs: "+c.nota); return t.join(", ");}
+
 function digest(a){
   if(!a) return "Sem dados ainda.";
   const p=a.perfil||{},r=a.resumo||{},sd=a.saude||{},L=[];
@@ -58,8 +74,32 @@ function digest(a){
   const ev=a.eventos_atipicos||[];
   if(ev.length){
     L.push("EVENTOS ATIPICOS (dias isolados fora do padrao dos ultimos 45d - trate como eventos pontuais, NAO como tendencia):");
-    ev.slice(0,10).forEach(e=>L.push(`  ${e.data} (${e.dia_semana}): ${e.metrica} ${e.valor}${e.unidade||""} ${e.direcao} do normal (mediana ${e.mediana_janela}${e.unidade||""})`));
+    ev.slice(0,10).forEach(e=>{
+      // a noite registrada no dia D sofre o efeito do que aconteceu em D-1 (e do proprio D, p/ stress)
+      const cx=[ctxTxt(addDias(e.data,-1)),ctxTxt(e.data)].filter(Boolean).join("; ");
+      L.push(`  ${e.data} (${e.dia_semana}): ${e.metrica} ${e.valor}${e.unidade||""} ${e.direcao} do normal (mediana ${e.mediana_janela}${e.unidade||""})${cx?` [EXPLICADO pelo contexto informado: ${cx}]`:""}`);
+    });
   }
+  // contexto informado pelo atleta + efeito medido de cada marcador
+  try{
+    if(CTX.size){
+      const ref=a.gerado_em||hojeLocal();
+      const recentes=[...CTX.keys()].filter(d=>d>=addDias(ref,-45)).sort();
+      if(recentes.length){
+        L.push("CONTEXTO INFORMADO PELO ATLETA (data = dia em que ocorreu; o efeito aparece na noite seguinte, que o Garmin registra no dia SEGUINTE):");
+        recentes.forEach(d=>L.push(`  ${d} (${DSEM[new Date(d+"T12:00:00Z").getUTCDay()]}): ${ctxTxt(d)}`));
+      }
+      const desde=addDias(ref,-180), byDay=new Map((a.daily||[]).map(x=>[x.d,x]));
+      const afetados=new Set([...CTX.entries()].filter(([d,c])=>(c.tags||[]).length).map(([d])=>addDias(d,1)));
+      const livres=(a.daily||[]).filter(x=>x.d>=desde&&!afetados.has(x.d));
+      const f=(arr,k)=>medN(arr.map(x=>x[k]).filter(v=>v!=null))??"-";
+      CTX_TAGS.forEach(t=>{
+        const com=[...CTX.entries()].filter(([d,c])=>d>=desde&&(c.tags||[]).includes(t.k)).map(([d])=>byDay.get(addDias(d,1))).filter(Boolean);
+        if(com.length<3) return;   // menos de 3 noites: ainda nao da para medir
+        L.push(`  EFEITO MEDIDO de "${t.l}" (${com.length} noites) vs noites sem contexto (${livres.length}): sono ${f(com,"sono")}h vs ${f(livres,"sono")}h, score ${f(com,"sono_score")} vs ${f(livres,"sono_score")}, HRV ${f(com,"hrv")} vs ${f(livres,"hrv")}, BB pico ${f(com,"bb_alta")} vs ${f(livres,"bb_alta")}, FCrep ${f(com,"fcrep")} vs ${f(livres,"fcrep")}`);
+      });
+    }
+  }catch(e){ console.error("digest contexto falhou:",e); }
   // relacoes treino x saude (correlacoes calculadas sobre ~1 ano)
   try{
     const co=a.correlacoes;
@@ -195,6 +235,9 @@ function atualizarProntidao(){
   $("ringVal").textContent=score;
   const fill=$("ringFill"); if(fill) fill.setAttribute("stroke-dasharray", score+" 100");
   $("readyLabel").textContent=nota;
+  // se a vespera dessa noite tem contexto marcado, a nota baixa esta explicada (nao e fadiga de treino)
+  const cxNoite=ctxTxt(addDias(ss.d,-1));
+  if(cxNoite && score<80) desc="Noite afetada por: "+cxNoite+". Queda esperada, não sinal de fadiga do treino — hoje vá leve.";
   $("readyDesc").textContent=desc+" (base: sleep score "+ss.sono_score+" de "+ss.d.slice(8,10)+"/"+ss.d.slice(5,7)+")";
   hero.classList.remove("hide");
 }
@@ -361,10 +404,49 @@ function showTab(t){
   ["painel","avaliacao","treinador","config"].forEach(x=>{const el=$("t-"+x); if(el) el.classList.toggle("hide",x!==t);});
   document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
 }
+async function carregarContexto(){
+  try{
+    const {data,error}=await sb.from("contexto_diario").select("dia,tags,nota").eq("user_id",UID).gte("dia",addDias(hojeLocal(),-200));
+    if(error) throw error;
+    CTX=new Map((data||[]).map(r=>[r.dia,{tags:r.tags||[],nota:r.nota||""}])); CTX_OK=true;
+  }catch(e){ console.error("contexto do dia indisponivel:",e); CTX=new Map(); CTX_OK=false; }
+}
+async function salvarContexto(dia){
+  const c=CTX.get(dia)||{tags:[],nota:""}, m=$("ctxMsg");
+  try{
+    let r;
+    if(!c.tags.length && !c.nota){ r=await sb.from("contexto_diario").delete().eq("user_id",UID).eq("dia",dia); CTX.delete(dia); }
+    else r=await sb.from("contexto_diario").upsert({user_id:UID,dia,tags:c.tags,nota:c.nota||null,atualizado_em:new Date().toISOString()});
+    if(r.error) throw r.error;
+    if(m) m.textContent="Salvo.";
+    atualizarProntidao();
+  }catch(e){ console.error("salvar contexto falhou:",e); if(m) m.textContent="Não consegui salvar: "+(e.message||e); }
+}
+function renderContexto(){
+  if(!$("ctxCard")) return;
+  if(!CTX_DIA) CTX_DIA=hojeLocal();
+  $("ctxDia").textContent=rotDia(CTX_DIA);
+  $("ctxNext").disabled=CTX_DIA>=hojeLocal();
+  const c=CTX.get(CTX_DIA)||{tags:[],nota:""}, box=$("ctxChips");
+  box.replaceChildren();
+  CTX_TAGS.forEach(t=>{
+    const on=c.tags.includes(t.k), b=document.createElement("button");
+    b.type="button"; b.className="chip"+(on?" on":""); b.textContent=t.l; b.setAttribute("aria-pressed",on?"true":"false");
+    b.onclick=()=>{
+      const cur=CTX.get(CTX_DIA)||{tags:[],nota:""};
+      const tags=cur.tags.includes(t.k)?cur.tags.filter(x=>x!==t.k):[...cur.tags,t.k];
+      CTX.set(CTX_DIA,{tags,nota:cur.nota}); renderContexto(); salvarContexto(CTX_DIA);
+    };
+    box.appendChild(b);
+  });
+  $("ctxNota").value=c.nota||"";
+  $("ctxMsg").textContent=CTX_OK?"":"Contexto indisponível: a tabela ainda não existe no banco.";
+}
 async function carregarTudo(){
   const {data:snap}=await sb.from("snapshots").select("dados,atualizado_em").eq("user_id",UID).maybeSingle();
   ANALISE=snap?.dados||null; SNAP_AT=snap?.atualizado_em||null;
-  renderPainel(); await renderCoach(); await carregarDatas(); await carregarConversa();
+  await carregarContexto();
+  renderPainel(); renderContexto(); await renderCoach(); await carregarDatas(); await carregarConversa();
 }
 async function entrar(session){
   UID=session.user.id; $("uid").textContent=UID;
@@ -406,6 +488,9 @@ const nc=document.getElementById("novaConv"); if(nc) nc.addEventListener("click"
 const hdEl=document.getElementById("histData"); if(hdEl) hdEl.addEventListener("change",()=>carregarConversa(hdEl.value||null));
 document.getElementById("prevP").addEventListener("click",()=>{OFFP++;renderPainel();});
 document.getElementById("nextP").addEventListener("click",()=>{OFFP--;renderPainel();});
+const cxP=document.getElementById("ctxPrev"); if(cxP) cxP.addEventListener("click",()=>{CTX_DIA=addDias(CTX_DIA||hojeLocal(),-1);renderContexto();});
+const cxN=document.getElementById("ctxNext"); if(cxN) cxN.addEventListener("click",()=>{const h=hojeLocal();CTX_DIA=addDias(CTX_DIA||h,1);if(CTX_DIA>h)CTX_DIA=h;renderContexto();});
+const cxO=document.getElementById("ctxNota"); if(cxO) cxO.addEventListener("change",()=>{const d=CTX_DIA||hojeLocal();const cur=CTX.get(d)||{tags:[],nota:""};CTX.set(d,{tags:cur.tags,nota:cxO.value.trim().slice(0,200)});salvarContexto(d);});
 document.getElementById("seg").addEventListener("click",e=>{const g=e.target.dataset.g;if(!g)return;GRANP=g;OFFP=0;[...document.querySelectorAll("#seg button")].forEach(x=>x.classList.toggle("on",x.dataset.g===g));renderPainel();});
 
 (async()=>{

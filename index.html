@@ -75,6 +75,17 @@
  .kpi-u{font-size:12px;color:var(--mut2);font-weight:700;}
  .kpi-sub{font-size:11px;color:var(--mut3);margin-top:5px;font-weight:600;}
 
+ /* ---------- contexto do dia ---------- */
+ .ctx-nav{display:flex;align-items:center;gap:8px;}
+ .ctx-nav button{flex:0 0 auto;min-width:44px;min-height:40px;}
+ .ctx-nav button:disabled{opacity:.3;}
+ #ctxDia{flex:1;text-align:center;font-size:14px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums;}
+ .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 12px;}
+ .chip{background:rgba(255,255,255,.06);border:1px solid var(--line2);color:var(--txt2);border-radius:999px;
+   padding:11px 15px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s;}
+ .chip.on{background:var(--acc);border-color:var(--acc);color:var(--ink);}
+ .chip:focus-visible,.ctx-nav button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;}
+
  /* ---------- segmented ---------- */
  .seg{display:flex;gap:5px;background:var(--seg);border:1px solid var(--line);border-radius:14px;padding:5px;flex-wrap:wrap;}
  .seg button{flex:1;min-width:46px;background:transparent;color:var(--mut);border:0;border-radius:9px;
@@ -176,6 +187,19 @@
           <div id="readyLabel" class="hero-t">&mdash;</div>
           <div id="readyDesc" class="hero-d"></div>
         </div>
+      </div>
+
+      <div class="seclbl"><span>Contexto do dia</span></div>
+      <div class="card" id="ctxCard">
+        <div class="ctx-nav">
+          <button id="ctxPrev" class="ghost" aria-label="Dia anterior">&#9664;</button>
+          <span id="ctxDia"></span>
+          <button id="ctxNext" class="ghost" aria-label="Pr&oacute;ximo dia">&#9654;</button>
+        </div>
+        <div id="ctxChips" class="chips"></div>
+        <input id="ctxNota" class="in" type="text" maxlength="200" placeholder="Observa&ccedil;&atilde;o (opcional)" aria-label="Observa&ccedil;&atilde;o do dia">
+        <p class="dim" style="margin:10px 2px 0">Marque o dia em que aconteceu. A junta l&ecirc; o efeito na noite seguinte e n&atilde;o trata como tend&ecirc;ncia.</p>
+        <p id="ctxMsg" class="dim" style="margin:4px 2px 0" aria-live="polite"></p>
       </div>
 
       <div class="seclbl"><span>Resumo</span></div>
